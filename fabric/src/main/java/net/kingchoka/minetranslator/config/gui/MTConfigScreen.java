@@ -130,7 +130,6 @@ public class MTConfigScreen extends Screen {
         CHAT("MineTranslator.category.chat"),
         ITEMS("MineTranslator.category.items"),
         MY_MESSAGES("MineTranslator.category.mymessages"),
-        KEYBINDS("MineTranslator.category.keybinds"),
         ADVANCED("MineTranslator.category.advanced");
 
         public final String langKey;
@@ -376,20 +375,7 @@ public class MTConfigScreen extends Screen {
                 addToggle("MineTranslator.option.auto_send", this.autoSendAfterTranslation, v -> this.autoSendAfterTranslation = v);
                 break;
 
-            case KEYBINDS:
-                addHeader("MineTranslator.category.keybinds");
-                addKeybind("MineTranslator.keybind.translate_hovered_chat", MTKeyMappings.TRANSLATE_KEY);
-                addKeybind("MineTranslator.keybind.translate_selected_input", MTKeyMappings.TRANSLATE_INPUT_KEY);
-                addKeybind("key.MineTranslator.config", MTKeyMappings.CONFIG_KEY);
-                addKeybind("MineTranslator.keybind.translate_hovered_item", MTKeyMappings.TRANSLATE_ITEM_KEY);
-                addKeybind("MineTranslator.keybind.fast_translate", MTKeyMappings.FAST_TRANSLATE_KEY);
-                addKeybind("MineTranslator.keybind.toggle_auto_chat", MTKeyMappings.TOGGLE_AUTO_CHAT_KEY);
-                addKeybind("MineTranslator.keybind.toggle_auto_npc", MTKeyMappings.TOGGLE_AUTO_NPC_KEY);
-                addKeybind("MineTranslator.keybind.toggle_auto_items", MTKeyMappings.TOGGLE_AUTO_ITEMS_KEY);
 
-                OptionRow warningRow = new OptionRow("MineTranslator.error.conflict", false);
-                this.optionRows.add(warningRow);
-                break;
 
             case ADVANCED:
                 addHeader("MineTranslator.category.advanced");

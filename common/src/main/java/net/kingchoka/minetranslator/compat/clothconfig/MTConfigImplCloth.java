@@ -307,6 +307,7 @@ public class MTConfigImplCloth implements MTConfig {
     @Override
     public void save() {
         holder.save();
+        net.kingchoka.minetranslator.core.TranslationKit.getInstance().clearCache();
         OpenAIClientProvider.getInstance().refresh();
         OpenAIClientProvider.refreshCacheModels();
         DeepLTranslationProvider.getInstance().refresh();
@@ -350,7 +351,10 @@ public class MTConfigImplCloth implements MTConfig {
 
         ClientTickCallbacks.POST.register(client -> {
             if (MTKeyMappings.CONFIG_KEY.isDown()) {
-                client.setScreen(new net.kingchoka.minetranslator.config.gui.MTConfigScreen(client.screen));
+                var compat = net.kingchoka.minetranslator.MineTranslator.getCompat();
+                if (compat != null) {
+                    compat.openConfigScreen(client.screen);
+                }
             }
         });
 
@@ -421,7 +425,11 @@ public class MTConfigImplCloth implements MTConfig {
 
         @Override
         public Screen createScreen(Screen parent) {
-            return new net.kingchoka.minetranslator.config.gui.MTConfigScreen(parent);
+            var compat = net.kingchoka.minetranslator.MineTranslator.getCompat();
+            if (compat != null) {
+                return (Screen) compat.createConfigScreen(parent);
+            }
+            return null;
         }
     }
 }

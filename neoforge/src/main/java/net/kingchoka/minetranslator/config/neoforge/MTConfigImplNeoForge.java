@@ -629,13 +629,19 @@ public class MTConfigImplNeoForge implements MTConfig {
         container.registerConfig(ModConfig.Type.CLIENT, SPEC, MineTranslator.ID + ".toml");
 
         container.registerExtensionPoint(IConfigScreenFactory.class,
-                (c, p) -> new net.kingchoka.minetranslator.config.gui.MTConfigScreen(p));
+                (c, p) -> {
+                    var compat = MineTranslator.getCompat();
+                    return compat != null ? (net.minecraft.client.gui.screens.Screen) compat.createConfigScreen(p) : null;
+                });
         NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, MTConfigImplNeoForge::afterClientTick);
     }
 
     public static void afterClientTick(ClientTickEvent.Post event) {
         if (MTKeyMappings.CONFIG_KEY.isDown()) {
-            Minecraft.getInstance().setScreen(new net.kingchoka.minetranslator.config.gui.MTConfigScreen(Minecraft.getInstance().screen));
+            var compat = MineTranslator.getCompat();
+            if (compat != null) {
+                compat.openConfigScreen(Minecraft.getInstance().screen);
+            }
         }
     }
 

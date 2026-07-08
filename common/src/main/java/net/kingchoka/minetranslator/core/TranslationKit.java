@@ -234,7 +234,9 @@ public final class TranslationKit {
         }
 
         // Check cache first
-        String cachedResult = translationCache.get(translatedText);
+        String targetLang = MTConfig.getInstance().getTargetLanguage();
+        String cacheKey = translatedText + "|" + targetLang;
+        String cachedResult = translationCache.get(cacheKey);
         if (cachedResult != null) {
             translatedResult = I18n.get("misc.MineTranslator.translation", cachedResult) + SUCCESS;
             translated = true;
@@ -257,7 +259,7 @@ public final class TranslationKit {
                         return MTConfig.getInstance().getService().provider.translate(
                                 translatedText,
                                 MTConfig.getInstance().getSourceLanguage(),
-                                MTConfig.getInstance().getTargetLanguage(),
+                                targetLang,
                                 new java.util.ArrayList<>()
                         );
                     } catch (Exception e) {
@@ -267,7 +269,7 @@ public final class TranslationKit {
                 .thenAcceptAsync(it -> {
                     // Update the result and cache it
                     translatedResult = it + SUCCESS;
-                    translationCache.put(translatedText, it); // Add to cache
+                    translationCache.put(cacheKey, it); // Add to cache
                     client.execute(() -> {
                         if (this.chatFrozen && this.lockedChatMessage != null) {
                             this.applyChatTranslation(client);

@@ -9,11 +9,22 @@ import org.slf4j.LoggerFactory;
 
 public final class MineTranslator {
     public static final String ID = "minetranslator";
-    public static final String NAME = "Translator++";
+    public static final String NAME = "MineTranslator";
     public static final Logger LOGGER = LoggerFactory.getLogger(NAME);
+
+    private static net.kingchoka.minetranslator.compat.IMTCompat compat;
 
     private MineTranslator() {
         throw new AssertionError("MineTranslator should not be instantiated");
+    }
+
+    public static net.kingchoka.minetranslator.compat.IMTCompat getCompat() {
+        if (compat == null) {
+            compat = java.util.ServiceLoader.load(net.kingchoka.minetranslator.compat.IMTCompat.class)
+                .findFirst()
+                .orElse(null);
+        }
+        return compat;
     }
 
     public static void init() {

@@ -22,6 +22,18 @@ public interface TPPConfig {
 
     TranslationMode getMode();
 
+    boolean getAutoTranslateChat();
+
+    boolean getAutoTranslateNpc();
+
+    boolean getUseNpcContextOnly();
+
+    int getTranslationContextSize();
+
+    boolean getShowOriginalWithTranslation();
+
+    boolean getPreserveFormatting();
+
     String getSourceLanguage();
 
     String getTargetLanguage();
@@ -38,13 +50,61 @@ public interface TPPConfig {
 
     String getDeepLApiKey();
 
-    String getLibreApiKey();
+    String getGeminiApiKey();
+    String getGeminiBaseUrl();
+    String getGeminiModel();
+    String getClaudeApiKey();
+    String getClaudeBaseUrl();
+    String getClaudeModel();
 
-    String getLibreBaseUrl();
+    boolean getTranslatePlayerMessages();
 
-    String getOllamaBaseUrl();
+    boolean getPreserveGameTermsInPlayerChat();
 
-    String getOllamaModel();
+    boolean getShowPlayerOriginalWithTranslation();
+
+    boolean getTranslateMyMessagesBeforeSending();
+
+    String getMyMessageTargetLanguage();
+
+    boolean getShowTranslationPreviewBeforeSending();
+
+    boolean getSendOriginalIfTranslationFails();
+
+    boolean getUseContextForMyMessages();
+
+    int getPlayerContextSize();
+
+    boolean getPlayerContextOnly();
+
+    boolean getReplaceInputWithTranslation();
+
+    boolean getAutoSendAfterTranslation();
+
+    boolean getAutoTranslateItemNames();
+
+    boolean getAutoTranslateItemTooltips();
+
+    boolean getPreserveItemFormatting();
+
+    boolean getTranslateStats();
+
+    boolean getTranslateLore();
+
+    boolean getTranslateEnchantments();
+
+    boolean getTranslateAbilities();
+
+    boolean getFastTranslationMode();
+
+    boolean getPreloadChatTranslations();
+
+    boolean getPreloadTooltipTranslations();
+
+    int getMaxCacheSize();
+
+    void set(String optionName, Object value);
+    void save();
 
     @ExpectMixin(value = ExpectMixin.Expected.NEOFORGE, method = ExpectMixin.Method.OVERWRITE)
     static void init() {
@@ -82,6 +142,36 @@ public interface TPPConfig {
         @Override
         public TranslationMode getMode() {
             return Default.mode;
+        }
+
+        @Override
+        public boolean getAutoTranslateChat() {
+            return Default.autoTranslateChat;
+        }
+
+        @Override
+        public boolean getAutoTranslateNpc() {
+            return Default.autoTranslateNpc;
+        }
+
+        @Override
+        public boolean getUseNpcContextOnly() {
+            return Default.useNpcContextOnly;
+        }
+
+        @Override
+        public int getTranslationContextSize() {
+            return Default.translationContextSize;
+        }
+
+        @Override
+        public boolean getShowOriginalWithTranslation() {
+            return Default.showOriginalWithTranslation;
+        }
+
+        @Override
+        public boolean getPreserveFormatting() {
+            return Default.preserveFormatting;
         }
 
         @Override
@@ -125,24 +215,155 @@ public interface TPPConfig {
         }
 
         @Override
-        public String getLibreApiKey() {
-            return Default.libreApiKey;
+        public String getGeminiApiKey() {
+            return Default.geminiApiKey;
         }
 
         @Override
-        public String getLibreBaseUrl() {
-            return Default.libreBaseUrl;
+        public String getGeminiBaseUrl() {
+            return Default.geminiBaseUrl;
         }
 
         @Override
-        public String getOllamaBaseUrl() {
-            return Default.ollamaBaseUrl;
+        public String getGeminiModel() {
+            return Default.geminiModel;
         }
 
         @Override
-        public String getOllamaModel() {
-            return Default.ollamaModel;
+        public String getClaudeApiKey() {
+            return Default.claudeApiKey;
         }
+
+        @Override
+        public String getClaudeBaseUrl() {
+            return Default.claudeBaseUrl;
+        }
+
+        @Override
+        public String getClaudeModel() {
+            return Default.claudeModel;
+        }
+
+        @Override
+        public boolean getTranslatePlayerMessages() {
+            return Default.translatePlayerMessages;
+        }
+
+        @Override
+        public boolean getPreserveGameTermsInPlayerChat() {
+            return Default.preserveGameTermsInPlayerChat;
+        }
+
+        @Override
+        public boolean getShowPlayerOriginalWithTranslation() {
+            return Default.showPlayerOriginalWithTranslation;
+        }
+
+        @Override
+        public boolean getTranslateMyMessagesBeforeSending() {
+            return Default.translateMyMessagesBeforeSending;
+        }
+
+        @Override
+        public String getMyMessageTargetLanguage() {
+            return Default.myMessageTargetLanguage;
+        }
+
+        @Override
+        public boolean getShowTranslationPreviewBeforeSending() {
+            return Default.showTranslationPreviewBeforeSending;
+        }
+
+        @Override
+        public boolean getSendOriginalIfTranslationFails() {
+            return Default.sendOriginalIfTranslationFails;
+        }
+
+        @Override
+        public boolean getUseContextForMyMessages() {
+            return Default.useContextForMyMessages;
+        }
+
+        @Override
+        public int getPlayerContextSize() {
+            return Default.playerContextSize;
+        }
+
+        @Override
+        public boolean getPlayerContextOnly() {
+            return Default.playerContextOnly;
+        }
+
+        @Override
+        public boolean getReplaceInputWithTranslation() {
+            return Default.replaceInputWithTranslation;
+        }
+
+        @Override
+        public boolean getAutoSendAfterTranslation() {
+            return Default.autoSendAfterTranslation;
+        }
+
+        @Override
+        public boolean getAutoTranslateItemNames() {
+            return Default.autoTranslateItemNames;
+        }
+
+        @Override
+        public boolean getAutoTranslateItemTooltips() {
+            return Default.autoTranslateItemTooltips;
+        }
+
+        @Override
+        public boolean getPreserveItemFormatting() {
+            return Default.preserveItemFormatting;
+        }
+
+        @Override
+        public boolean getTranslateStats() {
+            return Default.translateStats;
+        }
+
+        @Override
+        public boolean getTranslateLore() {
+            return Default.translateLore;
+        }
+
+        @Override
+        public boolean getTranslateEnchantments() {
+            return Default.translateEnchantments;
+        }
+
+        @Override
+        public boolean getTranslateAbilities() {
+            return Default.translateAbilities;
+        }
+
+        @Override
+        public boolean getFastTranslationMode() {
+            return Default.fastTranslationMode;
+        }
+
+        @Override
+        public boolean getPreloadChatTranslations() {
+            return Default.preloadChatTranslations;
+        }
+
+        @Override
+        public boolean getPreloadTooltipTranslations() {
+            return Default.preloadTooltipTranslations;
+        }
+
+        @Override
+        public int getMaxCacheSize() {
+            return Default.maxCacheSize;
+        }
+
+        @Override
+        public void set(String optionName, Object value) {}
+
+        @Override
+        public void save() {}
 
         public static void init() {
             ClientTickCallbacks.POST.register(client -> {
@@ -158,6 +379,12 @@ public interface TPPConfig {
      */
     interface Default {
         TranslationMode mode = TranslationMode.NAME_TOP;
+        boolean autoTranslateChat = false;
+        boolean autoTranslateNpc = false;
+        boolean useNpcContextOnly = true;
+        int translationContextSize = 5;
+        boolean showOriginalWithTranslation = false;
+        boolean preserveFormatting = true;
         String sourceLanguage = "auto";
         String targetLanguage = "zh-CN";
         TranslationService service = TranslationService.GoogleTranslation;
@@ -166,9 +393,35 @@ public interface TPPConfig {
         String openaiCustomBaseUrl = "https://custom.api.url/";
         String openaiModel = "";
         String deeplApiKey = "";
-        String libreApiKey = "";
-        String libreBaseUrl = "https://libretranslate.com/";
-        String ollamaBaseUrl = "http://127.0.0.1:11434/";
-        String ollamaModel = "";
+        String geminiApiKey = "";
+        String geminiBaseUrl = "https://generativelanguage.googleapis.com/";
+        String geminiModel = "gemini-1.5-flash";
+        String claudeApiKey = "";
+        String claudeBaseUrl = "https://api.anthropic.com/";
+        String claudeModel = "claude-3-5-sonnet-20241022";
+
+        boolean translatePlayerMessages = false;
+        boolean preserveGameTermsInPlayerChat = true;
+        boolean showPlayerOriginalWithTranslation = false;
+        boolean translateMyMessagesBeforeSending = false;
+        String myMessageTargetLanguage = "en";
+        boolean showTranslationPreviewBeforeSending = true;
+        boolean sendOriginalIfTranslationFails = true;
+        boolean useContextForMyMessages = true;
+        int playerContextSize = 50;
+        boolean playerContextOnly = true;
+        boolean replaceInputWithTranslation = true;
+        boolean autoSendAfterTranslation = false;
+        boolean autoTranslateItemNames = false;
+        boolean autoTranslateItemTooltips = false;
+        boolean preserveItemFormatting = true;
+        boolean translateStats = true;
+        boolean translateLore = true;
+        boolean translateEnchantments = true;
+        boolean translateAbilities = true;
+        boolean fastTranslationMode = true;
+        boolean preloadChatTranslations = false;
+        boolean preloadTooltipTranslations = false;
+        int maxCacheSize = 1000;
     }
 }

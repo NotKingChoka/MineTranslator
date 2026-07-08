@@ -6,12 +6,16 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.GuiMessage;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.GuiMessageTag;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.components.ChatComponent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MessageSignature;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
 import net.psunset.translatorpp.api.ChatComponentMixinAccessor;
+import net.psunset.translatorpp.core.TranslationKit;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -62,6 +66,25 @@ public abstract class ChatComponentMixin implements ChatComponentMixinAccessor {
 
     @Shadow
     protected abstract int getLineHeight();
+
+    @Shadow
+    public abstract void addMessage(Component message, @Nullable MessageSignature signature, @Nullable GuiMessageTag tag);
+
+    @Inject(method = "addMessage(Lnet/minecraft/network/chat/Component;Lnet/minecraft/network/chat/MessageSignature;Lnet/minecraft/client/GuiMessageTag;)V", at = @At("HEAD"), cancellable = true)
+    private void translatorpp$onAddMessage(Component message, @Nullable MessageSignature signature, @Nullable GuiMessageTag tag, CallbackInfo ci) {
+        if (TranslationKit.getInstance().isChatFrozen()) {
+            TranslationKit.getInstance().bufferChatMessage(message, signature, tag);
+            ci.cancel();
+        }
+    }
+
+    @Inject(method = "addMessage(Lnet/minecraft/network/chat/Component;Lnet/minecraft/network/chat/MessageSignature;Lnet/minecraft/client/GuiMessageTag;)V", at = @At("RETURN"))
+    private void translatorpp$onAddMessageTail(Component message, @Nullable MessageSignature signature, @Nullable GuiMessageTag tag, CallbackInfo ci) {
+        if (!this.allMessages.isEmpty()) {
+            GuiMessage guiMessage = this.allMessages.get(0);
+            TranslationKit.getInstance().onNewChatMessageAdded(guiMessage, (ChatComponent) (Object) this);
+        }
+    }
 
     @Inject(method = "clearMessages(Z)V", at = @At("TAIL"))
     private void translatorpp$afterClearMessages(boolean bl, CallbackInfo ci) {
@@ -143,5 +166,48 @@ public abstract class ChatComponentMixin implements ChatComponentMixinAccessor {
             }
         }
         return -1;
+    }
+
+    @Shadow
+    public abstract void refreshTrimmedMessages();
+
+    @Unique
+    @Override
+    @Nullable
+    public GuiMessage translatorpp$getMessageAt(double globalMouseX, double globalMouseY) {
+        double mouseX = this.translatorpp$screenToChatX(globalMouseX);
+        double mouseY = this.translatorpp$screenToChatY(globalMouseY);
+        int i = this.translatorpp$getMessageLineIndexAt(mouseX, mouseY);
+        if (i >= 0 && i < this.translatorpp$messageIndexTrimmedToAll.length) {
+            int idx = this.translatorpp$messageIndexTrimmedToAll[i];
+            if (idx >= 0 && idx < this.allMessages.size()) {
+                return this.allMessages.get(idx);
+            }
+        }
+        return null;
+    }
+
+    @Unique
+    @Override
+    public int translatorpp$getMessageIndexAt(double globalMouseX, double globalMouseY) {
+        double mouseX = this.translatorpp$screenToChatX(globalMouseX);
+        double mouseY = this.translatorpp$screenToChatY(globalMouseY);
+        int i = this.translatorpp$getMessageLineIndexAt(mouseX, mouseY);
+        if (i >= 0 && i < this.translatorpp$messageIndexTrimmedToAll.length) {
+            return this.translatorpp$messageIndexTrimmedToAll[i];
+        }
+        return -1;
+    }
+
+    @Unique
+    @Override
+    public void translatorpp$addMessageDirect(Component message, @Nullable MessageSignature signature, @Nullable GuiMessageTag tag) {
+        this.addMessage(message, signature, tag);
+    }
+
+    @Unique
+    @Override
+    public void translatorpp$refreshTrimmedMessages() {
+        this.refreshTrimmedMessages();
     }
 }

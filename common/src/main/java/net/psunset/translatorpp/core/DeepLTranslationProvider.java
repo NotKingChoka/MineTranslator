@@ -52,7 +52,7 @@ public class DeepLTranslationProvider implements IServiceProvider {
     }
 
     @Override
-    public String translate(String q, String sl, String tl) throws IOException {
+    public String translate(String q, String sl, String tl, java.util.List<String> context) throws IOException {
         if (!this.isPresent()) {
             throw new IllegalStateException("DeepLTranslationProvider is not completely configured. API key must be set.");
         }

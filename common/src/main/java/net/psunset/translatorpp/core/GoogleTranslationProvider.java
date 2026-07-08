@@ -27,7 +27,7 @@ public class GoogleTranslationProvider implements IServiceProvider {
     }
 
     @Override
-    public String translate(String q, String sl, String tl) throws IOException {
+    public String translate(String q, String sl, String tl, java.util.List<String> context) throws IOException {
         String url = buildUrl(q, sl, tl);
         String response = getUrlResponse(url);
         return parseResult(response);

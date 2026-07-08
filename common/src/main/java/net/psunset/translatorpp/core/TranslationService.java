@@ -13,8 +13,8 @@ public enum TranslationService implements ComponentizableEnum {
     GoogleTranslation("Google Translation", GoogleTranslationProvider.INSTANCE),
     OpenAIClient("OpenAI Client", OpenAIClientProvider.INSTANCE),
     DeepLTranslation("DeepL Translation", DeepLTranslationProvider.INSTANCE),
-    LibreTranslate("Libre Translate", LibreTranslateProvider.INSTANCE),
-    OllamaClient("Ollama Client", OllamaClientProvider.INSTANCE);
+    Gemini("Gemini", GeminiProvider.INSTANCE),
+    Claude("Claude", ClaudeProvider.INSTANCE);
 
     public final String displayName;
     public final IServiceProvider provider;

@@ -71,32 +71,32 @@ public sealed abstract class ServiceException extends RuntimeException {
         }
     }
 
-    public static final class Libre extends ServiceException {
-        public Libre(int statusCode) {
+    public static final class Gemini extends ServiceException {
+        public Gemini(int statusCode) {
             super(statusCode);
         }
-        public Libre(String message, int statusCode) {
+        public Gemini(String message, int statusCode) {
             super(message, statusCode);
         }
-        public Libre(Throwable cause, int statusCode) {
+        public Gemini(Throwable cause, int statusCode) {
             super(cause, statusCode);
         }
-        public Libre(String message, Throwable cause, int statusCode) {
+        public Gemini(String message, Throwable cause, int statusCode) {
             super(message, cause, statusCode);
         }
     }
 
-    public static final class Ollama extends ServiceException {
-        public Ollama(int statusCode) {
+    public static final class Claude extends ServiceException {
+        public Claude(int statusCode) {
             super(statusCode);
         }
-        public Ollama(String message, int statusCode) {
+        public Claude(String message, int statusCode) {
             super(message, statusCode);
         }
-        public Ollama(Throwable cause, int statusCode) {
+        public Claude(Throwable cause, int statusCode) {
             super(cause, statusCode);
         }
-        public Ollama(String message, Throwable cause, int statusCode) {
+        public Claude(String message, Throwable cause, int statusCode) {
             super(message, cause, statusCode);
         }
     }

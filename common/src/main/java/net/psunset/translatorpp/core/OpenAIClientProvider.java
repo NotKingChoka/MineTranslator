@@ -39,6 +39,69 @@ public class OpenAIClientProvider implements IServiceProvider {
             Return only the translated text.
             """;
 
+    public static final String PROMPT_WITH_CONTEXT = """
+            You are a translation engine. Translate the current text from '%s' into '%s'. Preserve placeholders like {§a}, [§1], <§2>, and %s exactly.
+            Use the provided recent chat history context to ensure the translation is accurate and fits the conversation flow.
+            
+            Recent chat history context:
+            %s
+            
+            Current text to translate:
+            \"""
+            %s
+            \"""
+            
+            Return only the translated text.
+            """;
+
+    public static final String PLAYER_CHAT_PROMPT = """
+            You are a translation engine. Translate only the player's chat message into '%s'.
+            Preserve slang, item names, usernames, abbreviations, numbers, and game terms when appropriate.
+            Do not translate Minecraft ranks, names, commands, coordinates, or item names unless clearly necessary.
+            Return only the translated message text, without explanations, quotes, prefixes, or labels.
+            Preserve placeholders like {§a}, [§1], <§2>, and %s exactly.
+            
+            Text:
+            \"""
+            %s
+            \"""
+            """;
+
+    public static final String PLAYER_CHAT_PROMPT_WITH_CONTEXT = """
+            You are a translation engine. Translate only the player's chat message into '%s'.
+            Preserve slang, item names, usernames, abbreviations, numbers, and game terms when appropriate.
+            Do not translate Minecraft ranks, names, commands, coordinates, or item names unless clearly necessary.
+            Return only the translated message text, without explanations, quotes, prefixes, or labels.
+            Preserve placeholders like {§a}, [§1], <§2>, and %s exactly.
+            Use the provided recent chat history context to ensure the translation is accurate and fits the conversation flow.
+            
+            Recent chat history context:
+            %s
+            
+            Current chat message to translate:
+            \"""
+            %s
+            \"""
+            """;
+
+    public static String getLanguageName(String code) {
+        if (code == null) return "Russian";
+        switch (code.toLowerCase(java.util.Locale.ROOT)) {
+            case "en": return "English";
+            case "ru": return "Russian";
+            case "kk": return "Kazakh";
+            case "uk": return "Ukrainian";
+            case "de": return "German";
+            case "fr": return "French";
+            case "es": return "Spanish";
+            case "pt": return "Portuguese";
+            case "zh": return "Chinese";
+            case "ja": return "Japanese";
+            case "ko": return "Korean";
+            default: return code;
+        }
+    }
+
     /**
      * Grabbing the model list from online costs too much time.
      * So create a cache here to get it more swiftly.
@@ -127,12 +190,39 @@ public class OpenAIClientProvider implements IServiceProvider {
     }
 
     @Override
-    public String translate(String q, String sl, String tl) throws Exception {
+    public String translate(String q, String sl, String tl, java.util.List<String> context) throws Exception {
+        return translate(q, sl, tl, context, "GENERAL");
+    }
+
+    @Override
+    public String translate(String q, String sl, String tl, java.util.List<String> context, String type) throws Exception {
         if (!this.isPresent()) {
             throw new IllegalStateException("OpenAIClientProvider is not completely configured. API key, API provider, and model must be set.");
         }
 
-        String formattedPrompt = PROMPT.formatted(sl, tl, this.separator(), q);
+        String formattedPrompt;
+        if ("PLAYER_CHAT".equals(type)) {
+            String langName = getLanguageName(tl);
+            if (context != null && !context.isEmpty()) {
+                StringBuilder sb = new StringBuilder();
+                for (String ctx : context) {
+                    sb.append("- ").append(ctx).append("\n");
+                }
+                formattedPrompt = PLAYER_CHAT_PROMPT_WITH_CONTEXT.formatted(langName, this.separator(), sb.toString(), q);
+            } else {
+                formattedPrompt = PLAYER_CHAT_PROMPT.formatted(langName, this.separator(), q);
+            }
+        } else {
+            if (context != null && !context.isEmpty()) {
+                StringBuilder sb = new StringBuilder();
+                for (String ctx : context) {
+                    sb.append("- ").append(ctx).append("\n");
+                }
+                formattedPrompt = PROMPT_WITH_CONTEXT.formatted(sl, tl, this.separator(), sb.toString(), q);
+            } else {
+                formattedPrompt = PROMPT.formatted(sl, tl, this.separator(), q);
+            }
+        }
 
         JsonObject requestPayload = new JsonObject();
         requestPayload.addProperty("model", this.model);

@@ -17,10 +17,52 @@ public final class TPPKeyMappings {
             Categories.GENERAL
     );
 
-    public static KeyMapping CONFIG_KEY = register(
+    public static final KeyMapping TRANSLATE_INPUT_KEY = register(
+            "key.translatorpp.translate_input",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_Y,
+            Categories.GENERAL
+    );
+
+    public static final KeyMapping CONFIG_KEY = register(
             "key.translatorpp.config",
             InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_O,
+            Categories.GENERAL
+    );
+
+    public static final KeyMapping TRANSLATE_ITEM_KEY = register(
+            "key.translatorpp.translate_item",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_I,
+            Categories.GENERAL
+    );
+
+    public static final KeyMapping FAST_TRANSLATE_KEY = register(
+            "key.translatorpp.fast_translate",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_F,
+            Categories.GENERAL
+    );
+
+    public static final KeyMapping TOGGLE_AUTO_CHAT_KEY = register(
+            "key.translatorpp.toggle_auto_chat",
+            InputConstants.Type.KEYSYM,
+            InputConstants.UNKNOWN.getValue(),
+            Categories.GENERAL
+    );
+
+    public static final KeyMapping TOGGLE_AUTO_NPC_KEY = register(
+            "key.translatorpp.toggle_auto_npc",
+            InputConstants.Type.KEYSYM,
+            InputConstants.UNKNOWN.getValue(),
+            Categories.GENERAL
+    );
+
+    public static final KeyMapping TOGGLE_AUTO_ITEMS_KEY = register(
+            "key.translatorpp.toggle_auto_items",
+            InputConstants.Type.KEYSYM,
+            InputConstants.UNKNOWN.getValue(),
             Categories.GENERAL
     );
 

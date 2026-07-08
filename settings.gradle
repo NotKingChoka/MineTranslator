@@ -7,7 +7,7 @@ pluginManagement {
     }
 }
 
-rootProject.name = 'translatorpp'
+rootProject.name = 'minetranslator'
 
 include 'common'
 include 'fabric'

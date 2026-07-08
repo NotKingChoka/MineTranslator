@@ -63,11 +63,11 @@ jar {
     manifest {
         attributes([
                 'Specification-Title'     : "$mod_id",
-                'Specification-Vendor'    : "Project-SUNSET",
+                'Specification-Vendor'    : "NotKingChoka",
                 'Specification-Version'   : "1",
                 'Implementation-Title'    : "$archiveBaseName",
                 'Implementation-Version'  : this.project.jar.archiveVersion,
-                'Implementation-Vendor'   : "Project-SUNSET",
+                'Implementation-Vendor'   : "NotKingChoka",
                 'Implementation-Timestamp': new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
         ])
     }

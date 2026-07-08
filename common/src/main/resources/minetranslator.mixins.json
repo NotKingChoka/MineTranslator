@@ -1,0 +1,17 @@
+{
+    "required": true,
+    "package": "net.kingchoka.minetranslator.mixin",
+    "compatibilityLevel": "JAVA_21",
+    "minVersion": "0.8",
+    "client": [
+        "BookViewScreenMixin",
+        "ChatComponentMixin",
+        "ChatScreenMixin",
+        "wynntils.WrappingChatComponentMixin"
+    ],
+    "mixins": [
+    ],
+    "injectors": {
+        "defaultRequire": 1
+    }
+}

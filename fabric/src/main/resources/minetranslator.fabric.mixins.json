@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "package": "net.kingchoka.minetranslator.mixin.fabric",
+  "compatibilityLevel": "JAVA_21",
+  "minVersion": "0.8",
+  "plugin": "net.kingchoka.minetranslator.fabric.MTMixinPluginImpl",
+  "client": [
+  ],
+  "mixins": [
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

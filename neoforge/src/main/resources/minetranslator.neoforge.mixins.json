@@ -1,0 +1,17 @@
+{
+  "required": true,
+  "package": "net.kingchoka.minetranslator.mixin.neoforge",
+  "compatibilityLevel": "JAVA_21",
+  "minVersion": "0.8",
+  "plugin": "net.kingchoka.minetranslator.neoforge.MTMixinPluginImpl",
+  "client": [
+    "ConfigurationSectionScreenMixin"
+  ],
+  "mixins": [
+    "ComponentizableEnumMixin",
+    "MTConfigMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

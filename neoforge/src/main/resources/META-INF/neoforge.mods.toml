@@ -1,29 +1,29 @@
 modLoader = "javafml"
 loaderVersion = "[1,)"
 clientSideOnly = true
-displayURL = "https://www.curseforge.com/minecraft/mc-mods/translatorpp"
-issueTrackerURL = "https://github.com/pSUNSET/TranslatorPP/issues"
+displayURL = "https://www.curseforge.com/minecraft/mc-mods/MineTranslator"
+issueTrackerURL = "https://github.com/pSUNSET/MineTranslator/issues"
 logoFile = "icon.png"
-authors = "Project-SUNSET"
+authors = "NotKingChoka"
 credits = "Everyone who contributed to this mod"
 license = "MIT"
 
 [[mods]]
-modId = "translatorpp"
+modId = "minetranslator"
 version = "${version}"
 displayName = "Translator++"
 description = '''
 A mod for swift, light and convenient auto translation.
 '''
 
-[[dependencies.translatorpp]]
+[[dependencies.minetranslator]]
 modId = "neoforge"
 type = "required"
 versionRange = "${neoforge_version_range}"
 ordering = "NONE"
 side = "CLIENT"
 
-[[dependencies.translatorpp]]
+[[dependencies.minetranslator]]
 modId = "minecraft"
 type = "required"
 versionRange = "${minecraft_version_neoforge_range}"
@@ -31,10 +31,10 @@ ordering = "NONE"
 side = "CLIENT"
 
 [[mixins]]
-config = "translatorpp.mixins.json"
+config = "minetranslator.mixins.json"
 
 [[mixins]]
-config = "translatorpp.neoforge.mixins.json"
+config = "minetranslator.neoforge.mixins.json"
 
 [[accessTransformers]]
 file="META-INF/accesstransformer.cfg"

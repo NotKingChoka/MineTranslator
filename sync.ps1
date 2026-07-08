@@ -1,27 +1,27 @@
 $ErrorActionPreference = "Stop"
 
-Write-Host "=== 1. Запуск сборки мода ===" -ForegroundColor Cyan
+Write-Host "=== 1. Starting mod build ===" -ForegroundColor Cyan
 $env:JAVA_HOME="C:\Users\05071\AppData\Roaming\PrismLauncher\java\java-runtime-delta"
 
 $buildResult = Start-Process -FilePath "cmd.exe" -ArgumentList "/c gradlew.bat assemble" -NoNewWindow -Wait -PassThru
 
 if ($buildResult.ExitCode -ne 0) {
-    Write-Error "Сборка завершилась с ошибкой $($buildResult.ExitCode). Отправка изменений отменена."
+    Write-Error "Build failed with exit code $($buildResult.ExitCode). Upload cancelled."
 }
 
-Write-Host "=== 2. Индексация файлов в Git ===" -ForegroundColor Cyan
+Write-Host "=== 2. Staging files in Git ===" -ForegroundColor Cyan
 git add -A
 
-# Проверка наличия изменений
+# Check if there are changes
 $gitStatus = git status --porcelain
 if ([string]::IsNullOrEmpty($gitStatus)) {
-    Write-Host "Нет новых изменений для коммита." -ForegroundColor Yellow
+    Write-Host "No new changes to commit." -ForegroundColor Yellow
 } else {
-    Write-Host "=== 3. Создание коммита ===" -ForegroundColor Cyan
+    Write-Host "=== 3. Committing changes ===" -ForegroundColor Cyan
     $dateStr = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     git commit -m "Auto-update: $dateStr"
 }
 
-Write-Host "=== 4. Отправка изменений на GitHub ===" -ForegroundColor Cyan
+Write-Host "=== 4. Pushing changes to GitHub ===" -ForegroundColor Cyan
 git push origin
-Write-Host "=== Обновление успешно выполнено! ===" -ForegroundColor Green
+Write-Host "=== Sync complete! ===" -ForegroundColor Green

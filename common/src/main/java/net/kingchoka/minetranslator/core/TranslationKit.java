@@ -49,6 +49,8 @@ public final class TranslationKit {
 
     static final TranslationKit INSTANCE = new TranslationKit();
     static final Gson GSON = new GsonBuilder().create();
+    
+    public static boolean debugForceTranslateAll = false;
 
     public static final String SUCCESS = "<O>";
     public static final String PROCESSING = "<?>";
@@ -134,11 +136,17 @@ public final class TranslationKit {
 
     private final List<BufferedMessage> chatBuffer = new ArrayList<>();
 
+    private static final java.util.concurrent.atomic.AtomicLong messageSequence = new java.util.concurrent.atomic.AtomicLong(0);
+
     public static class TranslationState {
+        public final long id;
         public final GuiMessage original;
         public GuiMessage current;
+        public Component translatedContent = null;
+        public boolean isTranslating = false;
         
         public TranslationState(GuiMessage original) {
+            this.id = messageSequence.incrementAndGet();
             this.original = original;
             this.current = original;
         }
@@ -146,12 +154,19 @@ public final class TranslationKit {
 
     private final List<TranslationState> activeTranslations = Collections.synchronizedList(new ArrayList<>());
 
-    public void registerTranslationState(GuiMessage original) {
+    public TranslationState registerTranslationState(GuiMessage original) {
         synchronized (activeTranslations) {
-            activeTranslations.add(new TranslationState(original));
+            for (var s : activeTranslations) {
+                if (s.original == original || s.current == original) {
+                    return s;
+                }
+            }
+            TranslationState state = new TranslationState(original);
+            activeTranslations.add(state);
             if (activeTranslations.size() > 200) {
                 activeTranslations.remove(0); // Remove oldest
             }
+            return state;
         }
     }
 
@@ -159,6 +174,17 @@ public final class TranslationKit {
         synchronized (activeTranslations) {
             for (var state : activeTranslations) {
                 if (state.original == message || state.current == message) {
+                    return state;
+                }
+            }
+        }
+        return null;
+    }
+
+    public TranslationState getTranslationStateById(long id) {
+        synchronized (activeTranslations) {
+            for (var state : activeTranslations) {
+                if (state.id == id) {
                     return state;
                 }
             }
@@ -273,14 +299,15 @@ public final class TranslationKit {
         String targetLang = config.getTargetLanguage();
 
         if (this.originalChatMessage != null) {
-            registerTranslationState(this.originalChatMessage);
-        }
+            TranslationState state = registerTranslationState(this.originalChatMessage);
+            long messageId = state.id;
 
-        // Check if this is a player chat message to use the unified pipeline
-        SplitComponent playerSplit = (this.originalChatMessage != null) ? splitPlayerMessage(this.originalChatMessage.content()) : null;
-        if (playerSplit != null) {
-            // Player chat message: use the unified translatePlayerMessageAsync pipeline
-            String origBodyText = playerSplit.body.getString();
+            SplitComponent playerSplit = splitPlayerMessage(this.originalChatMessage.content());
+            boolean isPlayer = playerSplit != null;
+            SplitComponent split = isPlayer ? playerSplit : splitAtFirstColon(this.originalChatMessage.content());
+            boolean isNpc = isNpcMessage(this.originalChatMessage.content());
+
+            String origBodyText = split.body.getString();
             String textToTranslate = origBodyText.trim();
             
             // Set initial state
@@ -296,28 +323,35 @@ public final class TranslationKit {
                 config.getTranslationContextSize()
             );
 
-            this.translationFuture = translatePlayerMessageAsync(
+            TranslationRequest request = new TranslationRequest(
+                messageId,
+                this.originalChatMessage,
                 this.originalChatMessage.content(),
-                playerSplit,
+                split,
                 targetLang,
                 contextList,
-                finalComp -> {
-                    translatedResult = finalComp.getString() + SUCCESS;
-                    translated = true;
-                    client.execute(() -> {
-                        if (this.chatFrozen && this.lockedChatMessage != null) {
-                            this.translatedChatMessage = new GuiMessage(
-                                this.originalChatMessage.addedTime(),
-                                finalComp,
-                                this.originalChatMessage.signature(),
-                                this.originalChatMessage.tag()
-                            );
-                            client.gui.getChat().allMessages.set(this.lockedChatMessageIndex, this.translatedChatMessage);
-                            ((ChatComponentMixinAccessor) client.gui.getChat()).MineTranslator$refreshTrimmedMessages();
-                        }
-                    });
-                }
-            ).exceptionally(err -> {
+                isPlayer,
+                isNpc
+            );
+
+            MineTranslator.LOGGER.info("[MineTranslator][CHAT TRACE] Manual Hover triggers request for ID: {}", messageId);
+
+            this.translationFuture = translateChatMessage(request, finalComp -> {
+                translatedResult = finalComp.getString() + SUCCESS;
+                translated = true;
+                client.execute(() -> {
+                    if (this.chatFrozen && this.lockedChatMessage != null) {
+                        this.translatedChatMessage = new GuiMessage(
+                            this.originalChatMessage.addedTime(),
+                            finalComp,
+                            this.originalChatMessage.signature(),
+                            this.originalChatMessage.tag()
+                        );
+                        client.gui.getChat().allMessages.set(this.lockedChatMessageIndex, this.translatedChatMessage);
+                        ((ChatComponentMixinAccessor) client.gui.getChat()).MineTranslator$refreshTrimmedMessages();
+                    }
+                });
+            }).exceptionally(err -> {
                 MineTranslator.LOGGER.error("Player manual translation failed for: {}. Cause: {}", textToTranslate, err.getCause());
                 translatedResult = I18n.get("misc.MineTranslator.translation.failed") + ERROR;
                 client.execute(() -> {
@@ -1202,80 +1236,106 @@ public final class TranslationKit {
         }
     }
 
-    public CompletableFuture<Void> translatePlayerMessageAsync(
-        Component originalContent,
-        SplitComponent split,
-        String targetLang,
-        List<String> contextList,
+    public static class TranslationRequest {
+        public final long messageId;
+        public final GuiMessage guiMessage;
+        public final Component originalContent;
+        public final SplitComponent split;
+        public final String targetLang;
+        public final List<String> contextList;
+        public final boolean isPlayer;
+        public final boolean isNpc;
+        
+        public TranslationRequest(long messageId, GuiMessage guiMessage, Component originalContent, SplitComponent split, String targetLang, List<String> contextList, boolean isPlayer, boolean isNpc) {
+            this.messageId = messageId;
+            this.guiMessage = guiMessage;
+            this.originalContent = originalContent;
+            this.split = split;
+            this.targetLang = targetLang;
+            this.contextList = contextList;
+            this.isPlayer = isPlayer;
+            this.isNpc = isNpc;
+        }
+    }
+
+    public CompletableFuture<Void> translateChatMessage(
+        TranslationRequest request,
         java.util.function.Consumer<Component> onComplete
     ) {
-        String origBodyText = split.body.getString();
+        String origBodyText = request.split.body.getString();
         String textToTranslate = origBodyText.trim();
         if (textToTranslate.isEmpty()) {
             return CompletableFuture.completedFuture(null);
         }
 
-        if (shouldSkipTranslation(textToTranslate, targetLang)) {
-            MineTranslator.LOGGER.info("[MineTranslator] AUTO PLAYER MESSAGE Skipped. Reason: filtered by language or contains no translatable text.");
+        // In force debug translation, skip filter is bypassed!
+        if (!debugForceTranslateAll && shouldSkipTranslation(textToTranslate, request.targetLang)) {
+            MineTranslator.LOGGER.info("[MineTranslator][CHAT TRACE] ID: {} Skipped translation by skip filters.", request.messageId);
             return CompletableFuture.completedFuture(null);
         }
 
-        String cacheKey = getCacheKey(textToTranslate, targetLang, contextList);
+        String cacheKey = getCacheKey(textToTranslate, request.targetLang, request.contextList);
 
-        // Check cache first
-        if (this.translationCache.containsKey(cacheKey)) {
+        // In force debug translation, cache is bypassed!
+        if (!debugForceTranslateAll && this.translationCache.containsKey(cacheKey)) {
             String translated = this.translationCache.get(cacheKey);
-            Component finalComp = assembleTranslatedMessage(split, origBodyText, translated, false, true, MTConfig.getInstance());
+            Component finalComp = assembleTranslatedMessage(request.split, origBodyText, translated, request.isNpc, request.isPlayer, MTConfig.getInstance());
             onComplete.accept(finalComp);
-            MineTranslator.LOGGER.info("[MineTranslator] AUTO PLAYER MESSAGE Cache Hit! Translation applied.");
+            MineTranslator.LOGGER.info("[MineTranslator][CHAT TRACE] ID: {} Cache Hit. Translation applied.", request.messageId);
             return CompletableFuture.completedFuture(null);
         }
 
         PlaceholderProtector protector = new PlaceholderProtector();
-        String protectedText = protector.protect(textToTranslate);
+        String protectedText = debugForceTranslateAll ? textToTranslate : protector.protect(textToTranslate);
 
-        // Async translation
+        TranslationState state = getTranslationStateById(request.messageId);
+        if (state != null) {
+            state.isTranslating = true;
+        }
+
+        MineTranslator.LOGGER.info("[MineTranslator][CHAT TRACE] ID: {} Provider request started.", request.messageId);
+
         return CompletableFuture.runAsync(() -> {
             try {
                 MTConfig config = MTConfig.getInstance();
                 String sourceLang = config.getSourceLanguage();
 
-                // Detailed debug logging
-                MineTranslator.LOGGER.info("[MineTranslator] AUTO PLAYER MESSAGE");
-                MineTranslator.LOGGER.info("Full plain text: {}", originalContent.getString());
-                String senderName = getSenderName(split.prefix.getString());
-                MineTranslator.LOGGER.info("Detected username: {}", senderName);
-                MineTranslator.LOGGER.info("Detected prefix: {}", split.prefix.getString());
-                MineTranslator.LOGGER.info("Extracted content: {}", textToTranslate);
-                MineTranslator.LOGGER.info("Protected content to API: {}", protectedText);
-                MineTranslator.LOGGER.info("Provider: {}", config.getService().name());
-                MineTranslator.LOGGER.info("Target language: {}", targetLang);
-                MineTranslator.LOGGER.info("Context size: {}", contextList.size());
-                MineTranslator.LOGGER.info("Cache hit: false");
-                MineTranslator.LOGGER.info("Provider request started: true");
+                String type = request.isPlayer ? "PLAYER_CHAT" : "GENERAL";
+                
+                // In force debug translation, context size is forced to 0
+                List<String> activeContext = debugForceTranslateAll ? Collections.emptyList() : request.contextList;
 
                 String translatedRaw = config.getService().provider.translate(
                     protectedText,
                     sourceLang,
-                    targetLang,
-                    contextList,
-                    "PLAYER_CHAT"
+                    request.targetLang,
+                    activeContext,
+                    type
                 );
 
                 if (translatedRaw != null && !translatedRaw.isEmpty()) {
-                    String translated = protector.restore(translatedRaw);
-                    MineTranslator.LOGGER.info("Provider raw result: {}", translatedRaw);
-                    MineTranslator.LOGGER.info("Restored result: {}", translated);
+                    String translated = debugForceTranslateAll ? translatedRaw : protector.restore(translatedRaw);
+                    MineTranslator.LOGGER.info("[MineTranslator][CHAT TRACE] ID: {} Provider result received: {}", request.messageId, translated);
                     
-                    this.translationCache.put(cacheKey, translated);
-                    Component finalComp = assembleTranslatedMessage(split, origBodyText, translated, false, true, config);
-                    onComplete.accept(finalComp);
-                    MineTranslator.LOGGER.info("Replacement applied: true");
+                    if (!debugForceTranslateAll) {
+                        this.translationCache.put(cacheKey, translated);
+                    }
+
+                    if (state != null) {
+                        state.translatedContent = Component.literal(translated);
+                        state.isTranslating = false;
+                    }
+
+                    Component finalComp = assembleTranslatedMessage(request.split, origBodyText, translated, request.isNpc, request.isPlayer, config);
+                    Minecraft.getInstance().execute(() -> {
+                        onComplete.accept(finalComp);
+                        MineTranslator.LOGGER.info("[MineTranslator][CHAT TRACE] ID: {} Applied on client thread.", request.messageId);
+                    });
                 } else {
-                    MineTranslator.LOGGER.warn("Provider result is empty");
+                    MineTranslator.LOGGER.warn("[MineTranslator][CHAT TRACE] ID: {} Provider result is empty", request.messageId);
                 }
             } catch (Exception e) {
-                MineTranslator.LOGGER.error("Auto-translation failed for message: {}. Error: {}", textToTranslate, e.toString());
+                MineTranslator.LOGGER.error("[MineTranslator][CHAT TRACE] ID: {} Translation failed. Error: {}", request.messageId, e.toString());
             }
         }, translationExecutor);
     }
@@ -1287,11 +1347,18 @@ public final class TranslationKit {
         boolean autoPlayer = config.getTranslatePlayerMessages();
         boolean preload = config.getPreloadChatTranslations();
 
-        registerTranslationState(guiMessage);
-
         Component content = guiMessage.content();
-        boolean isNpc = isNpcMessage(content);
         
+        // 1. Register or retrieve stable state for this incoming message
+        TranslationState state = registerTranslationState(guiMessage);
+        long messageId = state.id;
+        
+        // Prevent recursive triggers
+        if (state.translatedContent != null || state.isTranslating) {
+            return;
+        }
+
+        boolean isNpc = isNpcMessage(content);
         SplitComponent split = null;
         boolean isPlayer = false;
         boolean isSystem = false;
@@ -1308,80 +1375,55 @@ public final class TranslationKit {
             }
         }
 
-        if (!isPlayer && autoPlayer) {
-            String cleanText = content.getString().replaceAll("§[0-9a-fk-orA-FK-OR]", "");
-            if (cleanText.contains(":") || cleanText.contains(">") || cleanText.contains("»") || cleanText.contains("▶")) {
-                MineTranslator.LOGGER.info("[MineTranslator] AUTO PLAYER MESSAGE Not detected as player message. Clean text: {}", cleanText);
-            }
-        }
+        String cleanText = content.getString().replaceAll("§[0-9a-fk-orA-FK-OR]", "");
+        MineTranslator.LOGGER.info("[MineTranslator][CHAT TRACE]");
+        MineTranslator.LOGGER.info("ID: {}", messageId);
+        MineTranslator.LOGGER.info("ChatHud addMessage intercepted: true");
+        MineTranslator.LOGGER.info("Original plain text: {}", cleanText);
+        MineTranslator.LOGGER.info("Force translate mode: {}", debugForceTranslateAll);
+        MineTranslator.LOGGER.info("Player detected: {}", isPlayer);
+        String senderName = isPlayer ? getSenderName(split.prefix.getString()) : "N/A";
+        MineTranslator.LOGGER.info("Detected username: {}", senderName);
+        MineTranslator.LOGGER.info("Extracted content: {}", split != null ? split.body.getString().trim() : "N/A");
 
-        boolean shouldTranslateForDisplay = (isNpc && autoNpc) || (isPlayer && autoPlayer) || (isSystem && autoChat);
+        boolean shouldTranslateForDisplay = debugForceTranslateAll || (isNpc && autoNpc) || (isPlayer && autoPlayer) || (isSystem && autoChat);
         boolean shouldTranslateForPreload = preload;
 
         if (!shouldTranslateForDisplay && !shouldTranslateForPreload) {
+            MineTranslator.LOGGER.info("[MineTranslator][CHAT TRACE] ID: {} Skipped: Ignored by configuration settings.", messageId);
             return;
         }
 
         String origBodyText = split.body.getString();
         String textToTranslate = origBodyText.trim();
         if (textToTranslate.isEmpty()) {
+            MineTranslator.LOGGER.info("[MineTranslator][CHAT TRACE] ID: {} Skipped: Body content is empty.", messageId);
             return;
         }
 
         String targetLang = config.getTargetLanguage();
-        if (shouldSkipTranslation(textToTranslate, targetLang)) {
-            return;
-        }
-
         boolean npcContextOnly = config.getUseNpcContextOnly();
         int contextSize = config.getTranslationContextSize();
-        List<String> contextList = getTranslationContext(chat, npcContextOnly, contextSize);
+        List<String> contextList = debugForceTranslateAll ? Collections.emptyList() : getTranslationContext(chat, npcContextOnly, contextSize);
 
-        if (isPlayer) {
-            // Use unified player translation pipeline
-            translatePlayerMessageAsync(content, split, targetLang, contextList, finalComp -> {
-                if (shouldTranslateForDisplay) {
-                    Minecraft.getInstance().execute(() -> {
-                        updateMessageInChat(chat, guiMessage, finalComp);
-                    });
-                }
-            });
-        } else {
-            // NPC or System message translation
-            String cacheKey = getCacheKey(textToTranslate, targetLang, contextList);
+        TranslationRequest request = new TranslationRequest(
+            messageId,
+            guiMessage,
+            content,
+            split,
+            targetLang,
+            contextList,
+            isPlayer,
+            isNpc
+        );
 
-            if (this.translationCache.containsKey(cacheKey)) {
-                if (shouldTranslateForDisplay) {
-                    String translated = this.translationCache.get(cacheKey);
-                    Component finalComp = assembleTranslatedMessage(split, origBodyText, translated, isNpc, isPlayer, config);
-                    updateMessageInChat(chat, guiMessage, finalComp);
-                }
-                return;
+        MineTranslator.LOGGER.info("[MineTranslator][CHAT TRACE] ID: {} Translation request created.", messageId);
+
+        translateChatMessage(request, finalComp -> {
+            if (shouldTranslateForDisplay) {
+                updateMessageInChat(chat, guiMessage, finalComp);
             }
-
-            final SplitComponent finalSplit = split;
-            final boolean finalIsNpc = isNpc;
-            final boolean finalIsPlayer = isPlayer;
-
-            translationExecutor.submit(() -> {
-                try {
-                    String sourceLang = config.getSourceLanguage();
-                    String translated = config.getService().provider.translate(textToTranslate, sourceLang, targetLang, contextList, "GENERAL");
-                    
-                    if (translated != null && !translated.isEmpty()) {
-                        this.translationCache.put(cacheKey, translated);
-                        if (shouldTranslateForDisplay) {
-                            Component finalComp = assembleTranslatedMessage(finalSplit, origBodyText, translated, finalIsNpc, finalIsPlayer, config);
-                            Minecraft.getInstance().execute(() -> {
-                                updateMessageInChat(chat, guiMessage, finalComp);
-                            });
-                        }
-                    }
-                } catch (Exception e) {
-                    MineTranslator.LOGGER.error("Auto-translation/Preload failed for message: {}. Error: {}", textToTranslate, e.toString());
-                }
-            });
-        }
+        });
     }
 
     private Component assembleTranslatedMessage(SplitComponent split, String origBodyText, String translatedText, boolean isNpc, boolean isPlayer, MTConfig config) {

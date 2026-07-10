@@ -1,4 +1,4 @@
-package net.kingchoka.minetranslator.compat.fabric.modmenu;
+package net.kingchoka.minetranslator.fabric.modmenu;
 
 import com.terraformersmc.modmenu.api.ConfigScreenFactory;
 import com.terraformersmc.modmenu.api.ModMenuApi;

@@ -70,8 +70,6 @@ processResources {
 }
 
 jar {
-    exclude 'net/kingchoka/minetranslator/compat/**'
-    exclude 'compat.fabric.mod.json'
     manifest {
         attributes([
                 'Specification-Title'     : "$mod_id",

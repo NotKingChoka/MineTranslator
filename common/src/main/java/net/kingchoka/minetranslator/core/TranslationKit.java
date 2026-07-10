@@ -223,6 +223,8 @@ public final class TranslationKit {
             return PlayerChatParseResult.invalid();
         }
 
+        PlayerChatParseResult res = PlayerChatParseResult.invalid();
+
         // 1. Try Hypixel structural format first
         Matcher matcher = HYPIXEL_PLAYER_MESSAGE.matcher(fullString);
         if (matcher.matches()) {
@@ -234,60 +236,78 @@ public final class TranslationKit {
             
             if (headName.equals(username)) {
                 int bodyStartIndex = prefix.length() + username.length() + separator.length();
-                return new PlayerChatParseResult(prefix, username, separator, body, bodyStartIndex, true);
+                res = new PlayerChatParseResult(prefix, username, separator, body, bodyStartIndex, true);
             }
-        }
-
-        // 2. Fallback: Parse messages without head marker
-        int sepIdx = -1;
-        
-        for (int i = 0; i < fullString.length(); i++) {
-            char c = fullString.charAt(i);
-            if (c == ':' || c == '»' || c == '▶') {
-                sepIdx = i;
-                break;
+        } else {
+            // 2. Fallback: Parse messages without head marker
+            int sepIdx = -1;
+            for (int i = 0; i < fullString.length(); i++) {
+                char c = fullString.charAt(i);
+                if (c == ':' || c == '»' || c == '▶') {
+                    sepIdx = i;
+                    break;
+                }
             }
-        }
-        
-        if (sepIdx != -1) {
-            String header = fullString.substring(0, sepIdx).trim();
-            String[] words = header.split("\\s+");
-            if (words.length > 0) {
-                String rawCandidate = words[words.length - 1].trim();
-                String candidate = rawCandidate.replaceAll("[\\[\\]\\(\\)\\{\\}]", "").trim();
-                
-                if (candidate.matches("^[a-zA-Z0-9_]{3,16}$")) {
-                    boolean isLocalPlayer = isPlayerInTabList(candidate);
-                    boolean isPrivateMessage = header.toLowerCase(Locale.ROOT).contains("from") || 
-                                               header.toLowerCase(Locale.ROOT).contains("to") || 
-                                               header.contains("сообщение");
+            
+            if (sepIdx != -1) {
+                String header = fullString.substring(0, sepIdx).trim();
+                String[] words = header.split("\\s+");
+                if (words.length > 0) {
+                    String rawCandidate = words[words.length - 1].trim();
+                    String candidate = rawCandidate.replaceAll("[\\[\\]\\(\\)\\{\\}]", "").trim();
                     
-                    if (isLocalPlayer || isPrivateMessage) {
-                        int candidateIdx = fullString.lastIndexOf(rawCandidate, sepIdx);
-                        if (candidateIdx != -1) {
-                            String prefix = fullString.substring(0, candidateIdx);
-                            int restIdx = sepIdx + 1;
-                            while (restIdx < fullString.length() && Character.isWhitespace(fullString.charAt(restIdx))) {
-                                restIdx++;
+                    if (candidate.matches("^[a-zA-Z0-9_]{3,16}$")) {
+                        boolean isLocalPlayer = isPlayerInTabList(candidate);
+                        boolean isPrivateMessage = header.toLowerCase(Locale.ROOT).contains("from") || 
+                                                   header.toLowerCase(Locale.ROOT).contains("to") || 
+                                                   header.contains("сообщение");
+                        
+                        if (isLocalPlayer || isPrivateMessage) {
+                            int candidateIdx = fullString.lastIndexOf(rawCandidate, sepIdx);
+                            if (candidateIdx != -1) {
+                                String prefix = fullString.substring(0, candidateIdx);
+                                int restIdx = sepIdx + 1;
+                                while (restIdx < fullString.length() && Character.isWhitespace(fullString.charAt(restIdx))) {
+                                    restIdx++;
+                                }
+                                String finalSeparator = fullString.substring(candidateIdx + rawCandidate.length(), restIdx);
+                                String body = fullString.substring(restIdx);
+                                
+                                res = new PlayerChatParseResult(
+                                    prefix,
+                                    candidate,
+                                    finalSeparator,
+                                    body,
+                                    restIdx,
+                                    true
+                                );
                             }
-                            String finalSeparator = fullString.substring(candidateIdx + rawCandidate.length(), restIdx);
-                            String body = fullString.substring(restIdx);
-                            
-                            return new PlayerChatParseResult(
-                                prefix,
-                                candidate,
-                                finalSeparator,
-                                body,
-                                restIdx,
-                                true
-                            );
                         }
                     }
                 }
             }
         }
 
-        return PlayerChatParseResult.invalid();
+        // Apply Sanity Checks
+        if (res.valid) {
+            if (res.bodyStartIndex <= res.prefix.length()) {
+                return PlayerChatParseResult.invalid();
+            }
+            if (!res.body.equals(fullString.substring(res.bodyStartIndex))) {
+                return PlayerChatParseResult.invalid();
+            }
+            if (res.body.contains(res.username + ":")) {
+                return PlayerChatParseResult.invalid();
+            }
+            if (fullString.contains(" head]")) {
+                int headIdx = fullString.indexOf("[" + res.username + " head]");
+                if (headIdx == -1) {
+                    return PlayerChatParseResult.invalid();
+                }
+            }
+        }
+
+        return res;
     }
 
     private static boolean isPlayerInTabList(String username) {
@@ -306,25 +326,36 @@ public final class TranslationKit {
         MineTranslator.LOGGER.info("[MineTranslator] Running PlayerMessageParser unit tests...");
         
         String[] testStrings = {
+            "[Endersalt head]Endersalt: eating blues at map frfr",
+            "[PP4L head]PP4L: where ru kvon",
+            "[Walking_Pepper head]Walking_Pepper: Lowballing 2b",
+            "[5oulKeeper head]5oulKeeper: you feel sad",
+            "[kvon19 head]kvon19: eny1 want final destination boots?",
+            "[presetq head]presetq: buying fish visit me",
             "[421] ⛃ [MVP++] [Frank_lol_ head]Frank_lol_: selling for lbin - tax :D",
             "[110] ⛃ [VIP] [DOTDOTDOTDOT500 head]DOTDOTDOTDOT500: feed me fellas in bank",
             "[163] ⛃ [MVP+] [Blue_Non head]Blue_Non: can someone apply ancient on my tara cp?",
             "[548] ⛃ [MVP+] [Donivan_White head]Donivan_White: eating yellow at bank please",
-            "[343] ⛃ [VIP] [Walking_Pepper head]Walking_Pepper: Lowballing 2b",
             "[397] ⛃ [MVP+] [KyleLikesCoffee head]KyleLikesCoffee: am i full",
             "[357] ⛃ [VIP] [pisztrang head]pisztrang: ty"
         };
         
         String[] expectedUsers = {
-            "Frank_lol_", "DOTDOTDOTDOT500", "Blue_Non", "Donivan_White", "Walking_Pepper", "KyleLikesCoffee", "pisztrang"
+            "Endersalt", "PP4L", "Walking_Pepper", "5oulKeeper", "kvon19", "presetq",
+            "Frank_lol_", "DOTDOTDOTDOT500", "Blue_Non", "Donivan_White", "KyleLikesCoffee", "pisztrang"
         };
         
         String[] expectedBodies = {
+            "eating blues at map frfr",
+            "where ru kvon",
+            "Lowballing 2b",
+            "you feel sad",
+            "eny1 want final destination boots?",
+            "buying fish visit me",
             "selling for lbin - tax :D",
             "feed me fellas in bank",
             "can someone apply ancient on my tara cp?",
             "eating yellow at bank please",
-            "Lowballing 2b",
             "am i full",
             "ty"
         };
@@ -332,7 +363,9 @@ public final class TranslationKit {
         int passed = 0;
         for (int i = 0; i < testStrings.length; i++) {
             PlayerChatParseResult res = parsePlayerMessage(testStrings[i]);
-            boolean matches = res.valid && res.username.equals(expectedUsers[i]) && res.body.equals(expectedBodies[i]);
+            boolean exactSuffix = res.valid && res.bodyStartIndex >= 0 && res.body.equals(testStrings[i].substring(res.bodyStartIndex));
+            boolean matches = res.valid && res.username.equals(expectedUsers[i]) && res.body.equals(expectedBodies[i]) && exactSuffix;
+            
             if (matches) {
                 passed++;
                 MineTranslator.LOGGER.info("[MineTranslator] Test {} PASSED: User: '{}', Body: '{}'", i + 1, res.username, res.body);
@@ -340,7 +373,7 @@ public final class TranslationKit {
                 MineTranslator.LOGGER.error("[MineTranslator] Test {} FAILED!", i + 1);
                 MineTranslator.LOGGER.error("  Input:    {}", testStrings[i]);
                 MineTranslator.LOGGER.error("  Expected: User: '{}', Body: '{}'", expectedUsers[i], expectedBodies[i]);
-                MineTranslator.LOGGER.error("  Actual:   Valid: {}, User: '{}', Body: '{}'", res.valid, res.username, res.body);
+                MineTranslator.LOGGER.error("  Actual:   Valid: {}, User: '{}', Body: '{}', SuffixMatches: {}", res.valid, res.username, res.body, exactSuffix);
             }
         }
         
@@ -1087,10 +1120,28 @@ public final class TranslationKit {
     public static SplitComponent splitPlayerMessage(Component original) {
         String fullString = original.getString();
         PlayerChatParseResult res = parsePlayerMessage(fullString);
-        if (!res.valid) {
-            return null;
+        
+        if (res.valid) {
+            boolean isHypixel = fullString.contains(" head]");
+            String strategy = isHypixel ? "HYPIXEL_HEAD_MARKER" : "NO_HEAD_MARKER";
+            boolean isExactSuffix = res.body.equals(fullString.substring(res.bodyStartIndex));
+
+            MineTranslator.LOGGER.info("[MineTranslator][PLAYER PARSER]");
+            MineTranslator.LOGGER.info("Version: 2.5.1-parser-fix");
+            MineTranslator.LOGGER.info("Parser implementation: HypixelHeadMarkerParserV2");
+            MineTranslator.LOGGER.info("Strategy: {}", strategy);
+            MineTranslator.LOGGER.info("Original: {}", fullString);
+            MineTranslator.LOGGER.info("Head username: {}", isHypixel ? res.username : "N/A");
+            MineTranslator.LOGGER.info("Visible username: {}", res.username);
+            MineTranslator.LOGGER.info("Detected username: {}", res.username);
+            MineTranslator.LOGGER.info("Extracted content: {}", res.body);
+            MineTranslator.LOGGER.info("Body start index: {}", res.bodyStartIndex);
+            MineTranslator.LOGGER.info("Body is exact suffix: {}", isExactSuffix);
+
+            return splitComponentAtIndex(original, res.bodyStartIndex - 1);
         }
-        return splitComponentAtIndex(original, res.bodyStartIndex - 1);
+        
+        return null;
     }
 
     public static SplitComponent splitComponentAtIndex(Component original, int index) {

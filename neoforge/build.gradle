@@ -96,8 +96,6 @@ task compatJar(type: Jar) {
     include 'net/kingchoka/minetranslator/compat/**'
     include 'net/kingchoka/minetranslator/config/gui/**'
     include 'net/kingchoka/minetranslator/neoforge/MTMixinPluginImpl.class'
-    include 'minetranslator.mixins.json'
-    include 'minetranslator.neoforge.mixins.json'
     include 'META-INF/compat.neoforge.mods.toml'
     include 'META-INF/accesstransformer.cfg'
     include 'assets/**'

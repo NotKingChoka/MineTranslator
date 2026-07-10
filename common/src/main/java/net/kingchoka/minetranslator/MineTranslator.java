@@ -27,6 +27,11 @@ public final class MineTranslator {
     }
 
     public static void init() {
+        LOGGER.info("[MineTranslator] Version: 2.5.1-parser-fix");
+        LOGGER.info("[MineTranslator] Build timestamp: " + new java.util.Date().toString());
+        LOGGER.info("[MineTranslator] Active player parser: HypixelHeadMarkerParserV2");
+        LOGGER.info("[MineTranslator] Parser implementation: net.kingchoka.minetranslator.core.TranslationKit");
+
         TranslationKit.init();
         MTConfig.init();
         if (CompatUtl.Jade.isLoaded()) {

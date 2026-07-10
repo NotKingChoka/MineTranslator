@@ -47,6 +47,10 @@ import java.util.stream.IntStream;
  */
 public final class TranslationKit {
 
+    private static final Pattern HYPIXEL_PLAYER_MESSAGE = Pattern.compile(
+        "^(?<prefix>.*?\\[(?<headName>[A-Za-z0-9_]{3,16}) head\\])(?<username>[A-Za-z0-9_]{3,16})(?<separator>:\\s*)(?<body>.*)$"
+    );
+
     static final TranslationKit INSTANCE = new TranslationKit();
     static final Gson GSON = new GsonBuilder().create();
     
@@ -213,10 +217,6 @@ public final class TranslationKit {
             return new PlayerChatParseResult("", "", "", "", -1, false);
         }
     }
-
-    private static final Pattern HYPIXEL_PLAYER_MESSAGE = Pattern.compile(
-        "^(?<prefix>.*?\\[(?<headName>[A-Za-z0-9_]{3,16}) head\\])(?<username>[A-Za-z0-9_]{3,16})(?<separator>:\\s*)(?<body>.*)$"
-    );
 
     public static PlayerChatParseResult parsePlayerMessage(String fullString) {
         if (fullString == null || fullString.isBlank()) {

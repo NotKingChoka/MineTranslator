@@ -15,7 +15,9 @@ import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
 import net.kingchoka.minetranslator.api.ChatComponentMixinAccessor;
-import net.kingchoka.minetranslator.core.TranslationKit;
+import net.kingchoka.minetranslator.chat.ChatTranslationController;
+import net.kingchoka.minetranslator.chat.ChatEntryStore;
+import net.kingchoka.minetranslator.chat.ChatTranslationState;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -70,19 +72,11 @@ public abstract class ChatComponentMixin implements ChatComponentMixinAccessor {
     @Shadow
     public abstract void addMessage(Component message, @Nullable MessageSignature signature, @Nullable GuiMessageTag tag);
 
-    @Inject(method = "addMessage(Lnet/minecraft/network/chat/Component;Lnet/minecraft/network/chat/MessageSignature;Lnet/minecraft/client/GuiMessageTag;)V", at = @At("HEAD"), cancellable = true)
-    private void MineTranslator$onAddMessage(Component message, @Nullable MessageSignature signature, @Nullable GuiMessageTag tag, CallbackInfo ci) {
-        if (TranslationKit.getInstance().isChatFrozen()) {
-            TranslationKit.getInstance().bufferChatMessage(message, signature, tag);
-            ci.cancel();
-        }
-    }
-
     @Inject(method = "addMessage(Lnet/minecraft/network/chat/Component;Lnet/minecraft/network/chat/MessageSignature;Lnet/minecraft/client/GuiMessageTag;)V", at = @At("RETURN"))
     private void MineTranslator$onAddMessageTail(Component message, @Nullable MessageSignature signature, @Nullable GuiMessageTag tag, CallbackInfo ci) {
         if (!this.allMessages.isEmpty()) {
             GuiMessage guiMessage = this.allMessages.get(0);
-            TranslationKit.getInstance().onNewChatMessageAdded(guiMessage, (ChatComponent) (Object) this);
+            ChatTranslationController.getInstance().onChatMessageReceived(guiMessage, (ChatComponent) (Object) this);
         }
     }
 
@@ -98,7 +92,14 @@ public abstract class ChatComponentMixin implements ChatComponentMixinAccessor {
 
     @WrapOperation(method = "addMessageToDisplayQueue(Lnet/minecraft/client/GuiMessage;)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/GuiMessage;splitLines(Lnet/minecraft/client/gui/Font;I)Ljava/util/List;"))
     private List<FormattedCharSequence> MineTranslator$wrapSplitLines(GuiMessage instance, Font font, int i, Operation<List<FormattedCharSequence>> original) {
-        List<FormattedCharSequence> toReturn = original.call(instance, font, i);
+        var state = ChatEntryStore.getInstance().getState(instance);
+        List<FormattedCharSequence> toReturn;
+        if (state != null && state.status == ChatTranslationState.TranslationStatus.TRANSLATED && state.translatedText != null) {
+            toReturn = font.split(state.translatedText, i);
+        } else {
+            toReturn = original.call(instance, font, i);
+        }
+        
         int s = toReturn.size();
         for (int x = 99; x >= s; x--) {
             this.MineTranslator$messageIndexTrimmedToAll[x] = this.MineTranslator$messageIndexTrimmedToAll[x - s] + 1;
@@ -129,18 +130,12 @@ public abstract class ChatComponentMixin implements ChatComponentMixinAccessor {
         return MineTranslator$messageIndexTrimmedToAll;
     }
 
-    /**
-     * [Vanilla Copy] Original one got removed beyond 1.21.11
-     */
     @Unique
     @Override
     public double MineTranslator$screenToChatX(double x) {
         return x / this.getScale() - (double) 4.0F;
     }
 
-    /**
-     * [Vanilla Copy] Original one got removed beyond 1.21.11
-     */
     @Unique
     @Override
     public double MineTranslator$screenToChatY(double y) {
@@ -148,9 +143,6 @@ public abstract class ChatComponentMixin implements ChatComponentMixinAccessor {
         return d / (this.getScale() * (double) this.getLineHeight());
     }
 
-    /**
-     * [Vanilla Copy] Original one got removed beyond 1.21.11
-     */
     @Unique
     @Override
     public int MineTranslator$getMessageLineIndexAt(double mouseX, double mouseY) {

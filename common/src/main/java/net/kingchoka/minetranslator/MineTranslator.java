@@ -1,41 +1,67 @@
 package net.kingchoka.minetranslator;
 
-import net.kingchoka.minetranslator.compat.jade.MTCompatJade;
-import net.kingchoka.minetranslator.config.MTConfig;
-import net.kingchoka.minetranslator.core.TranslationKit;
-import net.kingchoka.minetranslator.tool.CompatUtl;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import net.kingchoka.minetranslator.chat.ChatTranslationController;
+import net.kingchoka.minetranslator.chat.PlayerMessageParser;
+import net.kingchoka.minetranslator.config.ModConfig;
+import net.kingchoka.minetranslator.debug.TranslationDebugLogger;
+import net.kingchoka.minetranslator.event.ClientTickCallbacks;
+import net.kingchoka.minetranslator.event.ItemTooltipCallbacks;
+import net.kingchoka.minetranslator.keybind.MTKeyMappings;
+import net.kingchoka.minetranslator.tooltip.TooltipTranslationController;
+import net.kingchoka.minetranslator.api.ChatComponentMixinAccessor;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.GuiMessage;
+import net.minecraft.client.gui.screens.Screen;
 
 public final class MineTranslator {
     public static final String ID = "minetranslator";
     public static final String NAME = "MineTranslator";
-    public static final Logger LOGGER = LoggerFactory.getLogger(NAME);
-
-    private static net.kingchoka.minetranslator.compat.IMTCompat compat;
 
     private MineTranslator() {
         throw new AssertionError("MineTranslator should not be instantiated");
     }
 
-    public static void setCompat(net.kingchoka.minetranslator.compat.IMTCompat value) {
-        compat = value;
-    }
-
-    public static net.kingchoka.minetranslator.compat.IMTCompat getCompat() {
-        return compat;
-    }
-
     public static void init() {
-        LOGGER.info("[MineTranslator] Version: 2.5.1-parser-fix");
-        LOGGER.info("[MineTranslator] Build timestamp: " + new java.util.Date().toString());
-        LOGGER.info("[MineTranslator] Active player parser: HypixelHeadMarkerParserV2");
-        LOGGER.info("[MineTranslator] Parser implementation: net.kingchoka.minetranslator.core.TranslationKit");
+        ModConfig.load();
+        ModConfig config = ModConfig.getInstance();
 
-        TranslationKit.init();
-        MTConfig.init();
-        if (CompatUtl.Jade.isLoaded()) {
-            MTCompatJade.init();
-        }
+        TranslationDebugLogger.info("[MineTranslator v3] Version: 3.0.0-alpha.1");
+        TranslationDebugLogger.info("[MineTranslator v3] Build timestamp: " + new java.util.Date().toString());
+        TranslationDebugLogger.info("[MineTranslator v3] Active ChatHud hook: ChatComponentMixin");
+        TranslationDebugLogger.info("[MineTranslator v3] Number of registered chat interceptors: 1");
+        TranslationDebugLogger.info("[MineTranslator v3] Tooltip hook: registered");
+        TranslationDebugLogger.info("[MineTranslator v3] Provider: " + config.provider);
+        TranslationDebugLogger.info("[MineTranslator v3] Target language: " + config.targetLanguage);
+
+        PlayerMessageParser.runParserTests();
+
+        ItemTooltipCallbacks.EVENT.register((stack, context, flag, lines) -> {
+            TooltipTranslationController.getInstance().onGetTooltip(stack, lines);
+        });
+
+        ClientTickCallbacks.POST.register(client -> {
+            if (client.player == null) return;
+
+            if (MTKeyMappings.CONFIG_KEY.consumeClick()) {
+                try {
+                    Class<?> screenClass = Class.forName("net.kingchoka.minetranslator.config.gui.MTConfigScreen");
+                    var method = screenClass.getMethod("create", Screen.class);
+                    Screen screen = (Screen) method.invoke(null, client.screen);
+                    client.setScreen(screen);
+                } catch (Exception e) {
+                    TranslationDebugLogger.error("Failed to open config screen: {}", e.toString());
+                }
+            }
+
+            if (MTKeyMappings.TRANSLATE_KEY.consumeClick()) {
+                double mouseX = client.mouseHandler.xpos();
+                double mouseY = client.mouseHandler.ypos();
+                GuiMessage msg = ((ChatComponentMixinAccessor) client.gui.getChat()).MineTranslator$getMessageAt(mouseX, mouseY);
+                if (msg != null) {
+                    TranslationDebugLogger.chat("Manual translation triggered for message: {}", msg.content().getString());
+                    ChatTranslationController.getInstance().translateMessage(msg, client.gui.getChat(), true);
+                }
+            }
+        });
     }
 }

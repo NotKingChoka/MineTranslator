@@ -29,3 +29,9 @@ type = "required"
 versionRange = "${minecraft_version_neoforge_range}"
 ordering = "NONE"
 side = "CLIENT"
+
+[[mixins]]
+config = "minetranslator.mixins.json"
+
+[[mixins]]
+config = "minetranslator.neoforge.mixins.json"

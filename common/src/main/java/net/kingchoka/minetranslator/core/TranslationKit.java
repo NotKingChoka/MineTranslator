@@ -17,6 +17,7 @@ import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.TextColor;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.client.multiplayer.PlayerInfo;
 import net.kingchoka.minetranslator.MineTranslator;
 import net.kingchoka.minetranslator.api.ChatComponentMixinAccessor;
 import net.kingchoka.minetranslator.api.ChatScreenMixinAccessor;
@@ -29,6 +30,9 @@ import net.kingchoka.minetranslator.tool.ClientUtl;
 import net.kingchoka.minetranslator.tool.TooltipUtl;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -129,6 +133,38 @@ public final class TranslationKit {
     }
 
     private final List<BufferedMessage> chatBuffer = new ArrayList<>();
+
+    public static class TranslationState {
+        public final GuiMessage original;
+        public GuiMessage current;
+        
+        public TranslationState(GuiMessage original) {
+            this.original = original;
+            this.current = original;
+        }
+    }
+
+    private final List<TranslationState> activeTranslations = Collections.synchronizedList(new ArrayList<>());
+
+    public void registerTranslationState(GuiMessage original) {
+        synchronized (activeTranslations) {
+            activeTranslations.add(new TranslationState(original));
+            if (activeTranslations.size() > 200) {
+                activeTranslations.remove(0); // Remove oldest
+            }
+        }
+    }
+
+    public TranslationState getTranslationState(GuiMessage message) {
+        synchronized (activeTranslations) {
+            for (var state : activeTranslations) {
+                if (state.original == message || state.current == message) {
+                    return state;
+                }
+            }
+        }
+        return null;
+    }
 
     private TranslationKit() {
     }
@@ -233,8 +269,70 @@ public final class TranslationKit {
             this.chatFrozen = true;
         }
 
+        MTConfig config = MTConfig.getInstance();
+        String targetLang = config.getTargetLanguage();
+
+        if (this.originalChatMessage != null) {
+            registerTranslationState(this.originalChatMessage);
+        }
+
+        // Check if this is a player chat message to use the unified pipeline
+        SplitComponent playerSplit = (this.originalChatMessage != null) ? splitPlayerMessage(this.originalChatMessage.content()) : null;
+        if (playerSplit != null) {
+            // Player chat message: use the unified translatePlayerMessageAsync pipeline
+            String origBodyText = playerSplit.body.getString();
+            String textToTranslate = origBodyText.trim();
+            
+            // Set initial state
+            translatedText = textToTranslate;
+            translatedResult = I18n.get("misc.MineTranslator.translation.processing") + PROCESSING;
+            if (this.chatFrozen && this.lockedChatMessage != null) {
+                this.applyChatTranslation(client);
+            }
+
+            List<String> contextList = getTranslationContext(
+                client.gui.getChat(),
+                config.getUseNpcContextOnly(),
+                config.getTranslationContextSize()
+            );
+
+            this.translationFuture = translatePlayerMessageAsync(
+                this.originalChatMessage.content(),
+                playerSplit,
+                targetLang,
+                contextList,
+                finalComp -> {
+                    translatedResult = finalComp.getString() + SUCCESS;
+                    translated = true;
+                    client.execute(() -> {
+                        if (this.chatFrozen && this.lockedChatMessage != null) {
+                            this.translatedChatMessage = new GuiMessage(
+                                this.originalChatMessage.addedTime(),
+                                finalComp,
+                                this.originalChatMessage.signature(),
+                                this.originalChatMessage.tag()
+                            );
+                            client.gui.getChat().allMessages.set(this.lockedChatMessageIndex, this.translatedChatMessage);
+                            ((ChatComponentMixinAccessor) client.gui.getChat()).MineTranslator$refreshTrimmedMessages();
+                        }
+                    });
+                }
+            ).exceptionally(err -> {
+                MineTranslator.LOGGER.error("Player manual translation failed for: {}. Cause: {}", textToTranslate, err.getCause());
+                translatedResult = I18n.get("misc.MineTranslator.translation.failed") + ERROR;
+                client.execute(() -> {
+                    if (this.chatFrozen && this.lockedChatMessage != null) {
+                        this.applyChatTranslation(client);
+                    }
+                });
+                this.clientExecuteSendingError(client, err.getCause());
+                return null;
+            });
+            return;
+        }
+
+        // Fallback for non-player messages (NPC, items, tooltips)
         // Check cache first
-        String targetLang = MTConfig.getInstance().getTargetLanguage();
         String cacheKey = translatedText + "|" + targetLang;
         String cachedResult = translationCache.get(cacheKey);
         if (cachedResult != null) {
@@ -485,6 +583,28 @@ public final class TranslationKit {
                 int length = (int) Math.round(ratio * translatedText.length());
                 length = Math.max(1, length);
                 nextTransIdx = Math.min(translatedText.length(), transIdx + length);
+
+                // Snapping color transitions to word boundaries to avoid splitting words
+                if (nextTransIdx > transIdx && nextTransIdx < translatedText.length()) {
+                    if (Character.isLetterOrDigit(translatedText.charAt(nextTransIdx - 1)) &&
+                        Character.isLetterOrDigit(translatedText.charAt(nextTransIdx))) {
+                        
+                        int leftBound = nextTransIdx;
+                        while (leftBound > transIdx && Character.isLetterOrDigit(translatedText.charAt(leftBound - 1))) {
+                            leftBound--;
+                        }
+                        int rightBound = nextTransIdx;
+                        while (rightBound < translatedText.length() && Character.isLetterOrDigit(translatedText.charAt(rightBound))) {
+                            rightBound++;
+                        }
+
+                        if (leftBound > transIdx && (nextTransIdx - leftBound <= rightBound - nextTransIdx || rightBound == translatedText.length())) {
+                            nextTransIdx = leftBound;
+                        } else if (rightBound < translatedText.length()) {
+                            nextTransIdx = rightBound;
+                        }
+                    }
+                }
             }
 
             String part = translatedText.substring(transIdx, nextTransIdx);
@@ -713,14 +833,55 @@ public final class TranslationKit {
         // Remove color codes
         clean = clean.replaceAll("§[0-9a-fk-orA-FK-OR]", "").trim();
         
-        // Find last word
-        int lastSpace = clean.lastIndexOf(' ');
-        if (lastSpace != -1) {
-            clean = clean.substring(lastSpace + 1);
+        // Split by whitespace
+        String[] words = clean.split("\\s+");
+        if (words.length == 0) return "";
+
+        // Iterate backwards from the last word to find the actual sender name
+        for (int i = words.length - 1; i >= 0; i--) {
+            String word = words[i].trim();
+            if (word.isEmpty()) continue;
+
+            // Strip brackets for validation
+            String stripped = word.replaceAll("[\\[\\]\\(\\)\\{\\}]", "").trim();
+
+            // Skip control characters and channel prefixes
+            if (stripped.equals(">") || 
+                stripped.equalsIgnoreCase("guild") || 
+                stripped.equalsIgnoreCase("party") || 
+                stripped.equalsIgnoreCase("to") || 
+                stripped.equalsIgnoreCase("from") || 
+                stripped.equalsIgnoreCase("co-op") || 
+                stripped.equalsIgnoreCase("officer")) {
+                continue;
+            }
+
+            // Skip numeric levels in brackets, e.g., [297]
+            if (word.startsWith("[") && word.endsWith("]") && stripped.matches("^\\d+$")) {
+                continue;
+            }
+
+            // Skip ranks in brackets, e.g., [MVP+]
+            if (word.startsWith("[") && word.endsWith("]") && 
+                (stripped.contains("MVP") || stripped.contains("VIP") || 
+                 stripped.equalsIgnoreCase("helper") || stripped.equalsIgnoreCase("admin") || 
+                 stripped.equalsIgnoreCase("youtube") || stripped.equalsIgnoreCase("owner") ||
+                 stripped.equalsIgnoreCase("mod") || stripped.equalsIgnoreCase("gm"))) {
+                continue;
+            }
+
+            // Skip trailing guild tags like PlayerName [TAG]
+            if (i == words.length - 1 && word.startsWith("[") && word.endsWith("]")) {
+                if (i > 0) {
+                    continue;
+                }
+            }
+
+            if (isValidUsername(stripped)) {
+                return stripped;
+            }
         }
-        // Remove remaining brackets if any
-        clean = clean.replaceAll("[\\[\\]\\(\\)\\{\\}]", "").trim();
-        return clean;
+        return "";
     }
 
     public static boolean isValidUsername(String name) {
@@ -735,15 +896,77 @@ public final class TranslationKit {
 
     public static SplitComponent splitPlayerMessage(Component original) {
         String fullString = original.getString();
-        int colonIdx = findSeparatorColonIndex(fullString);
+        String clean = fullString.replaceAll("§[0-9a-fk-orA-FK-OR]", "");
+        
+        // 1. Get online player names from tab list
+        List<String> onlinePlayers = new ArrayList<>();
+        var connection = Minecraft.getInstance().getConnection();
+        if (connection != null) {
+            for (var info : connection.getOnlinePlayers()) {
+                if (info.getProfile() != null && info.getProfile().name() != null) {
+                    onlinePlayers.add(info.getProfile().name());
+                }
+            }
+        }
+        
+        // Sort players by length descending to match longer names first
+        onlinePlayers.sort((a, b) -> Integer.compare(b.length(), a.length()));
+        
+        String detectedUsername = null;
+        int detectedIndexInClean = -1;
+        int separatorLength = 0;
+        
+        // 2. Search for active player username in clean text
+        for (String playerName : onlinePlayers) {
+            int idx = clean.indexOf(playerName);
+            if (idx != -1 && idx < 60) {
+                int endOfNick = idx + playerName.length();
+                String after = clean.substring(endOfNick);
+                
+                boolean isChatSep = false;
+                String trimmedAfter = after.trim();
+                if (trimmedAfter.startsWith(":") || 
+                    trimmedAfter.startsWith(">") || 
+                    trimmedAfter.startsWith("»") || 
+                    trimmedAfter.startsWith("▶") || 
+                    trimmedAfter.startsWith("-")) {
+                    
+                    isChatSep = true;
+                    int firstSepCharIdx = after.indexOf(trimmedAfter.substring(0, 1));
+                    separatorLength = firstSepCharIdx + 1;
+                } else {
+                    // Check if it's a private message or party message without a colon separator
+                    String before = clean.substring(0, idx).toLowerCase(Locale.ROOT);
+                    if (before.contains("from") || before.contains("to") || before.contains("сообщение") || before.contains("party")) {
+                        isChatSep = true;
+                        separatorLength = 0; // split immediately after username
+                    }
+                }
+                
+                if (isChatSep) {
+                    detectedUsername = playerName;
+                    detectedIndexInClean = endOfNick + separatorLength;
+                    break;
+                }
+            }
+        }
+        
+        // 3. Apply split based on player list detection or fallback to regex
+        if (detectedUsername != null && detectedIndexInClean != -1) {
+            return splitComponentAtIndex(original, detectedIndexInClean - 1);
+        }
+        
+        // Fallback: use regex colon parser
+        int colonIdx = findSeparatorColonIndex(clean);
         if (colonIdx == -1) {
             return null;
         }
-        String prefixText = fullString.substring(0, colonIdx + 1);
+        String prefixText = clean.substring(0, colonIdx + 1);
         String sender = getSenderName(prefixText);
         if (!isValidUsername(sender)) {
             return null;
         }
+        
         return splitComponentAtIndex(original, colonIdx);
     }
 
@@ -798,12 +1021,10 @@ public final class TranslationKit {
         
         int cyrillicLetters = 0;
         int latinLetters = 0;
-        int totalLetters = 0;
         
         for (int i = 0; i < clean.length(); i++) {
             char c = clean.charAt(i);
             if (Character.isLetter(c)) {
-                totalLetters++;
                 if (Character.UnicodeBlock.of(c) == Character.UnicodeBlock.CYRILLIC) {
                     cyrillicLetters++;
                 } else if (c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z') {
@@ -812,18 +1033,19 @@ public final class TranslationKit {
             }
         }
         
-        if (totalLetters == 0) {
+        // If there are no letters at all, skip
+        if (cyrillicLetters == 0 && latinLetters == 0) {
             return true;
         }
         
         if ("ru".equalsIgnoreCase(targetLang) || "uk".equalsIgnoreCase(targetLang) || "kk".equalsIgnoreCase(targetLang)) {
-            if (cyrillicLetters > 0 && ((double) cyrillicLetters / totalLetters) > 0.6) {
+            // Skip only if there are no Latin letters to translate
+            if (latinLetters == 0) {
                 return true;
             }
-        }
-        
-        if ("en".equalsIgnoreCase(targetLang)) {
-            if (latinLetters > 0 && ((double) latinLetters / totalLetters) > 0.6) {
+        } else if ("en".equalsIgnoreCase(targetLang)) {
+            // Skip only if there is no Cyrillic to translate
+            if (cyrillicLetters == 0) {
                 return true;
             }
         }
@@ -923,12 +1145,149 @@ public final class TranslationKit {
         return context;
     }
 
+    public static class PlaceholderProtector {
+        private final List<String> placeholders = new ArrayList<>();
+        
+        public String protect(String text) {
+            if (text == null) return null;
+            
+            // 1. Protect URLs
+            Pattern urlPattern = Pattern.compile("https?://\\S+");
+            Matcher urlMatcher = urlPattern.matcher(text);
+            StringBuilder sb = new StringBuilder();
+            while (urlMatcher.find()) {
+                String url = urlMatcher.group();
+                placeholders.add(url);
+                urlMatcher.appendReplacement(sb, " __PROTECTED_VAL_" + (placeholders.size() - 1) + "__ ");
+            }
+            urlMatcher.appendTail(sb);
+            text = sb.toString();
+            
+            // 2. Protect alphanumeric values like 50m, 2b, x6, x6BNTT, 10k, 100lvl, etc.
+            Pattern alphaNumPattern = Pattern.compile("\\b(\\d+[a-zA-Z]+|[a-zA-Z]+\\d+[a-zA-Z0-9]*)\\b");
+            Matcher alphaNumMatcher = alphaNumPattern.matcher(text);
+            sb = new StringBuilder();
+            while (alphaNumMatcher.find()) {
+                String val = alphaNumMatcher.group();
+                placeholders.add(val);
+                alphaNumMatcher.appendReplacement(sb, " __PROTECTED_VAL_" + (placeholders.size() - 1) + "__ ");
+            }
+            alphaNumMatcher.appendTail(sb);
+            text = sb.toString();
+            
+            return text;
+        }
+        
+        public String restore(String translated) {
+            if (translated == null) return null;
+            String result = translated;
+            for (int i = placeholders.size() - 1; i >= 0; i--) {
+                String placeholder = "__PROTECTED_VAL_" + i + "__";
+                result = replaceIgnoreCaseAndSpacing(result, placeholder, placeholders.get(i));
+            }
+            return result;
+        }
+
+        private String replaceIgnoreCaseAndSpacing(String text, String placeholder, String replacement) {
+            String cleanPlaceholder = placeholder.toLowerCase(Locale.ROOT);
+            String lowerText = text.toLowerCase(Locale.ROOT);
+            
+            int idx = lowerText.indexOf(cleanPlaceholder);
+            if (idx != -1) {
+                return text.substring(0, idx) + replacement + text.substring(idx + placeholder.length());
+            }
+            
+            String regex = "__\\s*protected_val_\\s*" + placeholder.replaceAll("[^0-9]", "") + "\\s*__";
+            return text.replaceAll("(?i)" + regex, Matcher.quoteReplacement(replacement));
+        }
+    }
+
+    public CompletableFuture<Void> translatePlayerMessageAsync(
+        Component originalContent,
+        SplitComponent split,
+        String targetLang,
+        List<String> contextList,
+        java.util.function.Consumer<Component> onComplete
+    ) {
+        String origBodyText = split.body.getString();
+        String textToTranslate = origBodyText.trim();
+        if (textToTranslate.isEmpty()) {
+            return CompletableFuture.completedFuture(null);
+        }
+
+        if (shouldSkipTranslation(textToTranslate, targetLang)) {
+            MineTranslator.LOGGER.info("[MineTranslator] AUTO PLAYER MESSAGE Skipped. Reason: filtered by language or contains no translatable text.");
+            return CompletableFuture.completedFuture(null);
+        }
+
+        String cacheKey = getCacheKey(textToTranslate, targetLang, contextList);
+
+        // Check cache first
+        if (this.translationCache.containsKey(cacheKey)) {
+            String translated = this.translationCache.get(cacheKey);
+            Component finalComp = assembleTranslatedMessage(split, origBodyText, translated, false, true, MTConfig.getInstance());
+            onComplete.accept(finalComp);
+            MineTranslator.LOGGER.info("[MineTranslator] AUTO PLAYER MESSAGE Cache Hit! Translation applied.");
+            return CompletableFuture.completedFuture(null);
+        }
+
+        PlaceholderProtector protector = new PlaceholderProtector();
+        String protectedText = protector.protect(textToTranslate);
+
+        // Async translation
+        return CompletableFuture.runAsync(() -> {
+            try {
+                MTConfig config = MTConfig.getInstance();
+                String sourceLang = config.getSourceLanguage();
+
+                // Detailed debug logging
+                MineTranslator.LOGGER.info("[MineTranslator] AUTO PLAYER MESSAGE");
+                MineTranslator.LOGGER.info("Full plain text: {}", originalContent.getString());
+                String senderName = getSenderName(split.prefix.getString());
+                MineTranslator.LOGGER.info("Detected username: {}", senderName);
+                MineTranslator.LOGGER.info("Detected prefix: {}", split.prefix.getString());
+                MineTranslator.LOGGER.info("Extracted content: {}", textToTranslate);
+                MineTranslator.LOGGER.info("Protected content to API: {}", protectedText);
+                MineTranslator.LOGGER.info("Provider: {}", config.getService().name());
+                MineTranslator.LOGGER.info("Target language: {}", targetLang);
+                MineTranslator.LOGGER.info("Context size: {}", contextList.size());
+                MineTranslator.LOGGER.info("Cache hit: false");
+                MineTranslator.LOGGER.info("Provider request started: true");
+
+                String translatedRaw = config.getService().provider.translate(
+                    protectedText,
+                    sourceLang,
+                    targetLang,
+                    contextList,
+                    "PLAYER_CHAT"
+                );
+
+                if (translatedRaw != null && !translatedRaw.isEmpty()) {
+                    String translated = protector.restore(translatedRaw);
+                    MineTranslator.LOGGER.info("Provider raw result: {}", translatedRaw);
+                    MineTranslator.LOGGER.info("Restored result: {}", translated);
+                    
+                    this.translationCache.put(cacheKey, translated);
+                    Component finalComp = assembleTranslatedMessage(split, origBodyText, translated, false, true, config);
+                    onComplete.accept(finalComp);
+                    MineTranslator.LOGGER.info("Replacement applied: true");
+                } else {
+                    MineTranslator.LOGGER.warn("Provider result is empty");
+                }
+            } catch (Exception e) {
+                MineTranslator.LOGGER.error("Auto-translation failed for message: {}. Error: {}", textToTranslate, e.toString());
+            }
+        }, translationExecutor);
+    }
+
     public void onNewChatMessageAdded(GuiMessage guiMessage, ChatComponent chat) {
         MTConfig config = MTConfig.getInstance();
         boolean autoChat = config.getAutoTranslateChat();
         boolean autoNpc = config.getAutoTranslateNpc();
         boolean autoPlayer = config.getTranslatePlayerMessages();
         boolean preload = config.getPreloadChatTranslations();
+
+        registerTranslationState(guiMessage);
 
         Component content = guiMessage.content();
         boolean isNpc = isNpcMessage(content);
@@ -946,6 +1305,13 @@ public final class TranslationKit {
             } else {
                 split = splitAtFirstColon(content);
                 isSystem = true;
+            }
+        }
+
+        if (!isPlayer && autoPlayer) {
+            String cleanText = content.getString().replaceAll("§[0-9a-fk-orA-FK-OR]", "");
+            if (cleanText.contains(":") || cleanText.contains(">") || cleanText.contains("»") || cleanText.contains("▶")) {
+                MineTranslator.LOGGER.info("[MineTranslator] AUTO PLAYER MESSAGE Not detected as player message. Clean text: {}", cleanText);
             }
         }
 
@@ -971,53 +1337,51 @@ public final class TranslationKit {
         int contextSize = config.getTranslationContextSize();
         List<String> contextList = getTranslationContext(chat, npcContextOnly, contextSize);
 
-        String cacheKey = getCacheKey(textToTranslate, targetLang, contextList);
+        if (isPlayer) {
+            // Use unified player translation pipeline
+            translatePlayerMessageAsync(content, split, targetLang, contextList, finalComp -> {
+                if (shouldTranslateForDisplay) {
+                    Minecraft.getInstance().execute(() -> {
+                        updateMessageInChat(chat, guiMessage, finalComp);
+                    });
+                }
+            });
+        } else {
+            // NPC or System message translation
+            String cacheKey = getCacheKey(textToTranslate, targetLang, contextList);
 
-        if (this.translationCache.containsKey(cacheKey)) {
-            if (shouldTranslateForDisplay) {
-                String translated = this.translationCache.get(cacheKey);
-                Component finalComp = assembleTranslatedMessage(split, origBodyText, translated, isNpc, isPlayer, config);
-                updateMessageInChat(chat, guiMessage, finalComp);
+            if (this.translationCache.containsKey(cacheKey)) {
+                if (shouldTranslateForDisplay) {
+                    String translated = this.translationCache.get(cacheKey);
+                    Component finalComp = assembleTranslatedMessage(split, origBodyText, translated, isNpc, isPlayer, config);
+                    updateMessageInChat(chat, guiMessage, finalComp);
+                }
+                return;
             }
-            return;
+
+            final SplitComponent finalSplit = split;
+            final boolean finalIsNpc = isNpc;
+            final boolean finalIsPlayer = isPlayer;
+
+            translationExecutor.submit(() -> {
+                try {
+                    String sourceLang = config.getSourceLanguage();
+                    String translated = config.getService().provider.translate(textToTranslate, sourceLang, targetLang, contextList, "GENERAL");
+                    
+                    if (translated != null && !translated.isEmpty()) {
+                        this.translationCache.put(cacheKey, translated);
+                        if (shouldTranslateForDisplay) {
+                            Component finalComp = assembleTranslatedMessage(finalSplit, origBodyText, translated, finalIsNpc, finalIsPlayer, config);
+                            Minecraft.getInstance().execute(() -> {
+                                updateMessageInChat(chat, guiMessage, finalComp);
+                            });
+                        }
+                    }
+                } catch (Exception e) {
+                    MineTranslator.LOGGER.error("Auto-translation/Preload failed for message: {}. Error: {}", textToTranslate, e.toString());
+                }
+            });
         }
-
-        final SplitComponent finalSplit = split;
-        final boolean finalIsNpc = isNpc;
-        final boolean finalIsPlayer = isPlayer;
-
-        translationExecutor.submit(() -> {
-            try {
-                if (finalIsPlayer) {
-                    MineTranslator.LOGGER.info("[Translator++] Player chat detected");
-                    MineTranslator.LOGGER.info("Prefix: {}", finalSplit.prefix.getString());
-                    String senderName = getSenderName(finalSplit.prefix.getString());
-                    MineTranslator.LOGGER.info("Username: {}", senderName);
-                    MineTranslator.LOGGER.info("Original content: {}", textToTranslate);
-                    MineTranslator.LOGGER.info("Provider: {}", config.getService().name());
-                    MineTranslator.LOGGER.info("Target language: {}", targetLang);
-                }
-
-                String sourceLang = config.getSourceLanguage();
-                String type = finalIsPlayer ? "PLAYER_CHAT" : "GENERAL";
-                String translated = config.getService().provider.translate(textToTranslate, sourceLang, targetLang, contextList, type);
-                
-                if (translated != null && !translated.isEmpty()) {
-                    if (finalIsPlayer) {
-                        MineTranslator.LOGGER.info("Translated content: {}", translated);
-                    }
-                    this.translationCache.put(cacheKey, translated);
-                    if (shouldTranslateForDisplay) {
-                        Component finalComp = assembleTranslatedMessage(finalSplit, origBodyText, translated, finalIsNpc, finalIsPlayer, config);
-                        Minecraft.getInstance().execute(() -> {
-                            updateMessageInChat(chat, guiMessage, finalComp);
-                        });
-                    }
-                }
-            } catch (Exception e) {
-                MineTranslator.LOGGER.error("Auto-translation/Preload failed for message: {}. Error: {}", textToTranslate, e.toString());
-            }
-        });
     }
 
     private Component assembleTranslatedMessage(SplitComponent split, String origBodyText, String translatedText, boolean isNpc, boolean isPlayer, MTConfig config) {
@@ -1062,7 +1426,10 @@ public final class TranslationKit {
     }
 
     private void updateMessageInChat(ChatComponent chat, GuiMessage original, Component newContent) {
-        int index = chat.allMessages.indexOf(original);
+        TranslationState state = getTranslationState(original);
+        GuiMessage target = (state != null) ? state.current : original;
+        
+        int index = chat.allMessages.indexOf(target);
         if (index >= 0) {
             GuiMessage updatedMessage = new GuiMessage(
                 original.addedTime(),
@@ -1071,7 +1438,13 @@ public final class TranslationKit {
                 original.tag()
             );
             chat.allMessages.set(index, updatedMessage);
+            if (state != null) {
+                state.current = updatedMessage;
+            }
             ((ChatComponentMixinAccessor) chat).MineTranslator$refreshTrimmedMessages();
+            MineTranslator.LOGGER.info("[MineTranslator] Replacement applied successfully to message");
+        } else {
+            MineTranslator.LOGGER.warn("[MineTranslator] Failed to apply replacement: message not found in chat view list");
         }
     }
 

@@ -18,12 +18,11 @@ public final class MineTranslator {
         throw new AssertionError("MineTranslator should not be instantiated");
     }
 
+    public static void setCompat(net.kingchoka.minetranslator.compat.IMTCompat value) {
+        compat = value;
+    }
+
     public static net.kingchoka.minetranslator.compat.IMTCompat getCompat() {
-        if (compat == null) {
-            compat = java.util.ServiceLoader.load(net.kingchoka.minetranslator.compat.IMTCompat.class)
-                .findFirst()
-                .orElse(null);
-        }
         return compat;
     }
 

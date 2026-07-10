@@ -12,7 +12,11 @@
   },
   "license": "MIT",
   "icon": "icon.png",
-  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "net.kingchoka.minetranslator.compat.fabric.MTCompatFabricClient"
+    ]
+  },
   "mixins": [
     "minetranslator.mixins.json",
     "minetranslator.fabric.mixins.json"

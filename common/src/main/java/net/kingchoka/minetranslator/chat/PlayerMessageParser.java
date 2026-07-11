@@ -11,9 +11,7 @@ import java.util.regex.Pattern;
 public class PlayerMessageParser {
 
     private static final Pattern HYPIXEL_MESSAGE = Pattern.compile(
-        "^\\[(?<head>[A-Za-z0-9_]{1,16}) head\\]" +
-        "(?<username>[A-Za-z0-9_]{1,16}):\\s*" +
-        "(?<body>.*)$"
+        "(?:^|.*\\s)\\[(?<head>[A-Za-z0-9_]{1,16}) head\\](?<username>[A-Za-z0-9_]{1,16}):\\s*(?<body>.*)$"
     );
 
     public record PlayerParseResult(
@@ -101,28 +99,21 @@ public class PlayerMessageParser {
     public static void runParserTests() {
         TranslationDebugLogger.info("Running PlayerMessageParser unit tests...");
         String[] testStrings = {
-            "[Endersalt head]Endersalt: eating blues at map frfr",
-            "[PP4L head]PP4L: where ru kvon",
-            "[Walking_Pepper head]Walking_Pepper: Lowballing 2b",
+            "[3] [VIP] [inkobink head]inkobink: как получить эти цветные монеты над своим именем?",
+            "[421] ⛃ [MVP++] [Frank_lol_ head]Frank_lol_: selling for lbin - tax :D",
             "[5oulKeeper head]5oulKeeper: you feel sad",
-            "[kvon19 head]kvon19: eny1 want final destination boots?",
-            "[presetq head]presetq: buying fish visit me",
-            "[Frank_lol_ head]Frank_lol_: selling for lbin - tax :D",
-            "[DOTDOTDOTDOT500 head]DOTDOTDOTDOT500: feed me fellas in bank",
-            "[Blue_Non head]Blue_Non: can someone apply ancient on my tara cp?",
-            "[Donivan_White head]Donivan_White: eating yellow at bank please",
-            "[KyleLikesCoffee head]KyleLikesCoffee: am i full",
-            "[pisztrang head]pisztrang: ty"
+            "[VIP] [Endersalt head]Endersalt: eating blues at map frfr",
+            "[PP4L head]PP4L: where ru kvon"
         };
         String[] expectedUsers = {
-            "Endersalt", "PP4L", "Walking_Pepper", "5oulKeeper", "kvon19", "presetq",
-            "Frank_lol_", "DOTDOTDOTDOT500", "Blue_Non", "Donivan_White", "KyleLikesCoffee", "pisztrang"
+            "inkobink", "Frank_lol_", "5oulKeeper", "Endersalt", "PP4L"
         };
         String[] expectedBodies = {
-            "eating blues at map frfr", "where ru kvon", "Lowballing 2b", "you feel sad",
-            "eny1 want final destination boots?", "buying fish visit me", "selling for lbin - tax :D",
-            "feed me fellas in bank", "can someone apply ancient on my tara cp?",
-            "eating yellow at bank please", "am i full", "ty"
+            "как получить эти цветные монеты над своим именем?",
+            "selling for lbin - tax :D",
+            "you feel sad",
+            "eating blues at map frfr",
+            "where ru kvon"
         };
         
         int passed = 0;

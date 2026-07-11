@@ -43,27 +43,29 @@ public final class MineTranslator {
         net.kingchoka.minetranslator.event.ScreenCallbacks.KEY_PRESSED_POST.register((screen, context) -> {
             TranslationDebugLogger.info("[MineTranslator v3] KEY_PRESSED_POST triggered: {}", context);
             boolean matchTranslate = MTKeyMappings.TRANSLATE_KEY.matches(context);
-            boolean matchTranslateItem = MTKeyMappings.TRANSLATE_ITEM_KEY.matches(context);
-            TranslationDebugLogger.info("[MineTranslator v3] Match state: TRANSLATE_KEY={}, TRANSLATE_ITEM_KEY={}", matchTranslate, matchTranslateItem);
-            if (matchTranslate || matchTranslateItem) {
+            TranslationDebugLogger.info("[MineTranslator v3] Match state: TRANSLATE_KEY={}", matchTranslate);
+            if (matchTranslate) {
                 net.kingchoka.minetranslator.tooltip.TooltipTranslationController.setTranslateKeyPressed(true);
                 Minecraft client = Minecraft.getInstance();
                 double mouseX = client.mouseHandler.xpos();
                 double mouseY = client.mouseHandler.ypos();
-                GuiMessage msg = ((ChatComponentMixinAccessor) client.gui.getChat()).MineTranslator$getMessageAt(mouseX, mouseY);
-                if (msg != null) {
-                    TranslationDebugLogger.chat("Manual translation triggered via screen keypress for message: {}", msg.content().getString());
-                    ChatTranslationController.getInstance().translateMessage(msg, client.gui.getChat(), true);
-                } else {
-                    TranslationDebugLogger.chat("KEY_PRESSED_POST matched, but no message under mouse at X={}, Y={}", mouseX, mouseY);
+                try {
+                    GuiMessage msg = ((ChatComponentMixinAccessor) client.gui.getChat()).MineTranslator$getMessageAt(mouseX, mouseY);
+                    if (msg != null) {
+                        TranslationDebugLogger.chat("Manual translation triggered via screen keypress for message: {}", msg.content().getString());
+                        ChatTranslationController.getInstance().translateMessage(msg, client.gui.getChat(), true);
+                    } else {
+                        TranslationDebugLogger.chat("KEY_PRESSED_POST matched, but no message under mouse at X={}, Y={}", mouseX, mouseY);
+                    }
+                } catch (Exception e) {
+                    TranslationDebugLogger.chat("Failed to get chat message at X={}, Y={} in KEY_PRESSED_POST: {}", mouseX, mouseY, e.toString());
                 }
             }
         });
 
         net.kingchoka.minetranslator.event.ScreenCallbacks.KEY_RELEASED_POST.register((screen, context) -> {
             boolean matchTranslate = MTKeyMappings.TRANSLATE_KEY.matches(context);
-            boolean matchTranslateItem = MTKeyMappings.TRANSLATE_ITEM_KEY.matches(context);
-            if (matchTranslate || matchTranslateItem) {
+            if (matchTranslate) {
                 net.kingchoka.minetranslator.tooltip.TooltipTranslationController.setTranslateKeyPressed(false);
             }
         });
@@ -84,7 +86,7 @@ public final class MineTranslator {
                 }
             }
 
-            while (MTKeyMappings.TRANSLATE_KEY.consumeClick() || MTKeyMappings.TRANSLATE_ITEM_KEY.consumeClick()) {
+            while (MTKeyMappings.TRANSLATE_KEY.consumeClick()) {
                 if (client.player == null) continue;
                 double mouseX = client.mouseHandler.xpos();
                 double mouseY = client.mouseHandler.ypos();

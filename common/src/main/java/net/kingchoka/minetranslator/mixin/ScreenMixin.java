@@ -18,17 +18,13 @@ public class ScreenMixin {
     @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true)
     private void onKeyPressed(KeyEvent context, CallbackInfoReturnable<Boolean> cir) {
         boolean matchTranslate = MTKeyMappings.TRANSLATE_KEY.matches(context);
-        boolean matchTranslateItem = MTKeyMappings.TRANSLATE_ITEM_KEY.matches(context);
-        if (matchTranslate || matchTranslateItem) {
-            // Check if player is currently typing in a text field
-            if (isTextFieldFocused((Screen) (Object) this)) {
-                return;
-            }
-
+        if (matchTranslate) {
+            // Always enable translation state for tooltips
             TooltipTranslationController.setTranslateKeyPressed(true);
             
             // Handle chat message translation under cursor
             Minecraft client = Minecraft.getInstance();
+            boolean chatTranslated = false;
             if (client.gui != null && client.gui.getChat() != null) {
                 double mouseX = client.mouseHandler.xpos();
                 double mouseY = client.mouseHandler.ypos();
@@ -36,11 +32,19 @@ public class ScreenMixin {
                     GuiMessage msg = ((ChatComponentMixinAccessor) client.gui.getChat()).MineTranslator$getMessageAt(mouseX, mouseY);
                     if (msg != null) {
                         ChatTranslationController.getInstance().translateMessage(msg, client.gui.getChat(), true);
+                        chatTranslated = true;
                     }
                 } catch (Exception ignored) {}
             }
             
-            cir.setReturnValue(true);
+            // Check if player is currently typing in a text field
+            boolean isFieldFocused = isTextFieldFocused((Screen) (Object) this);
+
+            // Cancel the event only if no text field is focused OR we successfully translated a chat message under mouse.
+            // This allows item translation to work even when typing in search bars (though the key char will also type).
+            if (!isFieldFocused || chatTranslated) {
+                cir.setReturnValue(true);
+            }
         }
     }
 

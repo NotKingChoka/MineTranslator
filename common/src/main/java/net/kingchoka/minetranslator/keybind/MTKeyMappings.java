@@ -13,7 +13,7 @@ public final class MTKeyMappings {
     public static final KeyMapping TRANSLATE_KEY = register(
             "key.MineTranslator.translate",
             InputConstants.Type.KEYSYM,
-            GLFW.GLFW_KEY_T,
+            GLFW.GLFW_KEY_GRAVE_ACCENT,
             Categories.GENERAL
     );
 
@@ -28,13 +28,6 @@ public final class MTKeyMappings {
             "key.MineTranslator.config",
             InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_O,
-            Categories.GENERAL
-    );
-
-    public static final KeyMapping TRANSLATE_ITEM_KEY = register(
-            "key.MineTranslator.translate_item",
-            InputConstants.Type.KEYSYM,
-            GLFW.GLFW_KEY_GRAVE_ACCENT,
             Categories.GENERAL
     );
 

@@ -29,7 +29,7 @@ public class TooltipTranslationController {
         ModConfig config = ModConfig.getInstance();
         if (lines == null || lines.isEmpty()) return;
 
-        boolean forceTranslate = isMappingDown(MTKeyMappings.TRANSLATE_ITEM_KEY) || isMappingDown(MTKeyMappings.TRANSLATE_KEY);
+        boolean forceTranslate = isMappingDown(MTKeyMappings.TRANSLATE_KEY);
         boolean translateNames = config.autoTranslateItemNames || forceTranslate;
         boolean translateTooltips = config.autoTranslateItemTooltips || forceTranslate;
 

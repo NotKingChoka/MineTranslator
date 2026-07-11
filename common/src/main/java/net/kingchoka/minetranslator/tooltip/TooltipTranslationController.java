@@ -98,24 +98,13 @@ public class TooltipTranslationController {
         return true;
     }
 
+    private static volatile boolean translateKeyPressed = false;
+
+    public static void setTranslateKeyPressed(boolean pressed) {
+        translateKeyPressed = pressed;
+    }
+
     private static boolean isMappingDown(net.minecraft.client.KeyMapping mapping) {
-        if (mapping == null) return false;
-        try {
-            net.kingchoka.minetranslator.mixin.KeyMappingAccessor accessor = (net.kingchoka.minetranslator.mixin.KeyMappingAccessor) mapping;
-            com.mojang.blaze3d.platform.InputConstants.Key key = accessor.MineTranslator$getKey();
-            if (key != null && key.getValue() != com.mojang.blaze3d.platform.InputConstants.UNKNOWN.getValue()) {
-                long window = org.lwjgl.glfw.GLFW.glfwGetCurrentContext();
-                if (window != 0) {
-                    if (key.getType() == com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM) {
-                        return org.lwjgl.glfw.GLFW.glfwGetKey(window, key.getValue()) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
-                    } else if (key.getType() == com.mojang.blaze3d.platform.InputConstants.Type.MOUSE) {
-                        return org.lwjgl.glfw.GLFW.glfwGetMouseButton(window, key.getValue()) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
-                    }
-                }
-            }
-        } catch (Exception e) {
-            // Fallback
-        }
-        return mapping.isDown();
+        return translateKeyPressed;
     }
 }

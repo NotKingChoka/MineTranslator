@@ -36,20 +36,40 @@ public final class MineTranslator {
         PlayerMessageParser.runParserTests();
 
         ItemTooltipCallbacks.EVENT.register((stack, context, flag, lines) -> {
+            TranslationDebugLogger.info("[MineTranslator v3] ItemTooltipCallback triggered for: {}", stack.getHoverName().getString());
             TooltipTranslationController.getInstance().onGetTooltip(stack, lines);
         });
 
         net.kingchoka.minetranslator.event.ScreenCallbacks.KEY_PRESSED_POST.register((screen, context) -> {
-            Minecraft client = Minecraft.getInstance();
-            if (MTKeyMappings.TRANSLATE_KEY.matches(context) || MTKeyMappings.TRANSLATE_ITEM_KEY.matches(context)) {
+            TranslationDebugLogger.info("[MineTranslator v3] KEY_PRESSED_POST triggered: {}", context);
+            boolean matchTranslate = MTKeyMappings.TRANSLATE_KEY.matches(context);
+            boolean matchTranslateItem = MTKeyMappings.TRANSLATE_ITEM_KEY.matches(context);
+            TranslationDebugLogger.info("[MineTranslator v3] Match state: TRANSLATE_KEY={}, TRANSLATE_ITEM_KEY={}", matchTranslate, matchTranslateItem);
+            if (matchTranslate || matchTranslateItem) {
+                net.kingchoka.minetranslator.tooltip.TooltipTranslationController.setTranslateKeyPressed(true);
+                Minecraft client = Minecraft.getInstance();
                 double mouseX = client.mouseHandler.xpos();
                 double mouseY = client.mouseHandler.ypos();
                 GuiMessage msg = ((ChatComponentMixinAccessor) client.gui.getChat()).MineTranslator$getMessageAt(mouseX, mouseY);
                 if (msg != null) {
                     TranslationDebugLogger.chat("Manual translation triggered via screen keypress for message: {}", msg.content().getString());
                     ChatTranslationController.getInstance().translateMessage(msg, client.gui.getChat(), true);
+                } else {
+                    TranslationDebugLogger.chat("KEY_PRESSED_POST matched, but no message under mouse at X={}, Y={}", mouseX, mouseY);
                 }
             }
+        });
+
+        net.kingchoka.minetranslator.event.ScreenCallbacks.KEY_RELEASED_POST.register((screen, context) -> {
+            boolean matchTranslate = MTKeyMappings.TRANSLATE_KEY.matches(context);
+            boolean matchTranslateItem = MTKeyMappings.TRANSLATE_ITEM_KEY.matches(context);
+            if (matchTranslate || matchTranslateItem) {
+                net.kingchoka.minetranslator.tooltip.TooltipTranslationController.setTranslateKeyPressed(false);
+            }
+        });
+
+        net.kingchoka.minetranslator.event.ScreenCallbacks.REMOVED.register((screen) -> {
+            net.kingchoka.minetranslator.tooltip.TooltipTranslationController.setTranslateKeyPressed(false);
         });
 
         ClientTickCallbacks.POST.register(client -> {

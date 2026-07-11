@@ -16,8 +16,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(Screen.class)
 public class ScreenMixin {
     @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true)
-    private void onKeyPressed(int keyCode, int scanCode, int modifiers, CallbackInfoReturnable<Boolean> cir) {
-        KeyEvent context = new KeyEvent(keyCode, scanCode, modifiers);
+    private void onKeyPressed(KeyEvent context, CallbackInfoReturnable<Boolean> cir) {
         boolean matchTranslate = MTKeyMappings.TRANSLATE_KEY.matches(context);
         boolean matchTranslateItem = MTKeyMappings.TRANSLATE_ITEM_KEY.matches(context);
         if (matchTranslate || matchTranslateItem) {

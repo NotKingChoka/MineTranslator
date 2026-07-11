@@ -86,9 +86,6 @@ jar {
 shadowJar {
     configurations = [project.configurations.shadowBundle]
     archiveClassifier = 'dev-shadow'
-    exclude 'net/kingchoka/minetranslator/compat/**'
-    exclude 'net/kingchoka/minetranslator/config/gui/**'
-    exclude 'compat.fabric.mod.json'
 }
 
 remapJar {

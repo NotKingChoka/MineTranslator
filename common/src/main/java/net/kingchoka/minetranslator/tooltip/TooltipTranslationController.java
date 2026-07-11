@@ -3,6 +3,7 @@ package net.kingchoka.minetranslator.tooltip;
 import net.kingchoka.minetranslator.cache.TranslationCache;
 import net.kingchoka.minetranslator.config.ModConfig;
 import net.kingchoka.minetranslator.debug.TranslationDebugLogger;
+import net.kingchoka.minetranslator.keybind.MTKeyMappings;
 import net.kingchoka.minetranslator.translation.TranslationMode;
 import net.kingchoka.minetranslator.translation.TranslationRequest;
 import net.kingchoka.minetranslator.translation.TranslationService;
@@ -28,8 +29,9 @@ public class TooltipTranslationController {
         ModConfig config = ModConfig.getInstance();
         if (lines == null || lines.isEmpty()) return;
 
-        boolean translateNames = config.autoTranslateItemNames;
-        boolean translateTooltips = config.autoTranslateItemTooltips;
+        boolean forceTranslate = isMappingDown(MTKeyMappings.TRANSLATE_ITEM_KEY) || isMappingDown(MTKeyMappings.TRANSLATE_KEY);
+        boolean translateNames = config.autoTranslateItemNames || forceTranslate;
+        boolean translateTooltips = config.autoTranslateItemTooltips || forceTranslate;
 
         if (!translateNames && !translateTooltips) return;
 
@@ -94,5 +96,26 @@ public class TooltipTranslationController {
             }
         }
         return true;
+    }
+
+    private static boolean isMappingDown(net.minecraft.client.KeyMapping mapping) {
+        if (mapping == null) return false;
+        try {
+            net.kingchoka.minetranslator.mixin.KeyMappingAccessor accessor = (net.kingchoka.minetranslator.mixin.KeyMappingAccessor) mapping;
+            com.mojang.blaze3d.platform.InputConstants.Key key = accessor.MineTranslator$getKey();
+            if (key != null && key.getValue() != com.mojang.blaze3d.platform.InputConstants.UNKNOWN.getValue()) {
+                long window = org.lwjgl.glfw.GLFW.glfwGetCurrentContext();
+                if (window != 0) {
+                    if (key.getType() == com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM) {
+                        return org.lwjgl.glfw.GLFW.glfwGetKey(window, key.getValue()) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
+                    } else if (key.getType() == com.mojang.blaze3d.platform.InputConstants.Type.MOUSE) {
+                        return org.lwjgl.glfw.GLFW.glfwGetMouseButton(window, key.getValue()) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // Fallback
+        }
+        return mapping.isDown();
     }
 }

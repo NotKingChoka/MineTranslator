@@ -41,7 +41,7 @@ public final class MineTranslator {
 
         net.kingchoka.minetranslator.event.ScreenCallbacks.KEY_PRESSED_POST.register((screen, context) -> {
             Minecraft client = Minecraft.getInstance();
-            if (MTKeyMappings.TRANSLATE_KEY.matches(context)) {
+            if (MTKeyMappings.TRANSLATE_KEY.matches(context) || MTKeyMappings.TRANSLATE_ITEM_KEY.matches(context)) {
                 double mouseX = client.mouseHandler.xpos();
                 double mouseY = client.mouseHandler.ypos();
                 GuiMessage msg = ((ChatComponentMixinAccessor) client.gui.getChat()).MineTranslator$getMessageAt(mouseX, mouseY);
@@ -64,7 +64,7 @@ public final class MineTranslator {
                 }
             }
 
-            while (MTKeyMappings.TRANSLATE_KEY.consumeClick()) {
+            while (MTKeyMappings.TRANSLATE_KEY.consumeClick() || MTKeyMappings.TRANSLATE_ITEM_KEY.consumeClick()) {
                 if (client.player == null) continue;
                 double mouseX = client.mouseHandler.xpos();
                 double mouseY = client.mouseHandler.ypos();

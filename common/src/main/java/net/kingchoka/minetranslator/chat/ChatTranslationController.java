@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Locale;
 
 public class ChatTranslationController {
     private static final ChatTranslationController INSTANCE = new ChatTranslationController();
@@ -86,8 +87,8 @@ public class ChatTranslationController {
                 TranslationDebugLogger.chat("Result received. ID: {}, Translated: {}", state.entryId, translatedText);
 
                 Component finalComponent;
-                if (finalIsPlayer && finalBodyStartIndex > 0) {
-                    SplitComponent split = splitComponentAtIndex(content, finalBodyStartIndex - 1);
+                if (finalIsPlayer) {
+                    SplitComponent split = splitComponentAtIndex(content, parseResult.username());
                     Component translatedBody = Component.literal(translatedText).withStyle(split.body.getStyle());
                     finalComponent = Component.empty().append(split.prefix).append(translatedBody);
                 } else {
@@ -126,7 +127,7 @@ public class ChatTranslationController {
         }
     }
 
-    public static SplitComponent splitComponentAtIndex(Component original, int index) {
+    public static SplitComponent splitComponentAtIndex(Component original, String username) {
         List<Component> leaves = new ArrayList<>();
         original.visit((style, text) -> {
             if (!text.isEmpty()) {
@@ -135,11 +136,51 @@ public class ChatTranslationController {
             return Optional.empty();
         }, Style.EMPTY);
 
+        StringBuilder sb = new StringBuilder();
+        for (Component leaf : leaves) {
+            sb.append(leaf.getString());
+        }
+        String leavesText = sb.toString();
+
+        int sepIdx = -1;
+        if (username != null) {
+            String lowerText = leavesText.toLowerCase(Locale.ROOT);
+            String lowerUser = username.toLowerCase(Locale.ROOT);
+            int userIdx = lowerText.indexOf(lowerUser);
+            if (userIdx != -1) {
+                int searchStart = userIdx + lowerUser.length();
+                for (int i = searchStart; i < leavesText.length(); i++) {
+                    char c = leavesText.charAt(i);
+                    if (c == ':' || c == '»' || c == '▶') {
+                        sepIdx = i;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Fallback: find first separator in leavesText
+        if (sepIdx == -1) {
+            for (int i = 0; i < leavesText.length(); i++) {
+                char c = leavesText.charAt(i);
+                if (c == ':' || c == '»' || c == '▶') {
+                    sepIdx = i;
+                    break;
+                }
+            }
+        }
+
+        int boundary;
+        if (sepIdx != -1) {
+            boundary = sepIdx + 1;
+        } else {
+            boundary = leavesText.length();
+        }
+
         var prefixComponent = Component.empty().withStyle(original.getStyle());
         var bodyComponent = Component.empty().withStyle(original.getStyle());
 
         int currentOffset = 0;
-        int boundary = index + 1;
 
         for (Component leaf : leaves) {
             String leafText = leaf.getString();

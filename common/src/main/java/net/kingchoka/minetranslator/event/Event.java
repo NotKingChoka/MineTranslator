@@ -8,25 +8,32 @@ public final class Event<T extends Event.Callback> {
     private T[] callbacks;
     private final Function<T[], T> merger;
     private volatile T invoker;
+    private final T proxy;
 
     Event(Class<? extends T> type, Function<T[], T> merger) {
         this.merger = merger;
         this.callbacks = (T[]) Array.newInstance(type, 0);
+        this.invoker = merger.apply(this.callbacks);
+        this.proxy = (T) java.lang.reflect.Proxy.newProxyInstance(
+                type.getClassLoader(),
+                new Class<?>[]{type},
+                (p, method, args) -> method.invoke(invoker, args)
+        );
     }
 
-    public void register(T callback) {
+    public synchronized void register(T callback) {
         int oldLength = callbacks.length;
         callbacks = Arrays.copyOf(callbacks, oldLength + 1);
         callbacks[oldLength] = callback;
+        this.invoker = merger.apply(callbacks);
     }
 
     public T merge() {
-        invoker = merger.apply(callbacks);
-        return invoker;
+        return proxy;
     }
 
     public T getInvoker() {
-        return invoker;
+        return proxy;
     }
 
     /**

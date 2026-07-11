@@ -37,10 +37,15 @@ public class ClientPacketListenerMixin {
 
         ci.cancel();
 
+        String targetLang = config.sourceLanguage;
+        if ("auto".equalsIgnoreCase(targetLang) || targetLang == null || targetLang.trim().isEmpty()) {
+            targetLang = "en";
+        }
+
         TranslationRequest request = new TranslationRequest(
             message,
             config.targetLanguage,
-            config.sourceLanguage,
+            targetLang,
             TranslationMode.CHAT,
             Collections.emptyList(),
             config.provider

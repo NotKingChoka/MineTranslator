@@ -22,6 +22,7 @@ public class ClientPacketListenerMixin {
     @Inject(method = "sendChat", at = @At("HEAD"), cancellable = true)
     private void onSendChat(String message, CallbackInfo ci) {
         ModConfig config = ModConfig.getInstance();
+        TranslationDebugLogger.chat("onSendChat called: '{}', translateMyMessages is {}", message, config.translateMyMessages);
         if (!config.translateMyMessages) {
             return;
         }

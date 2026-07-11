@@ -89,12 +89,10 @@ public class ChatTranslationController {
                 Component finalComponent;
                 if (finalIsPlayer) {
                     SplitComponent split = splitComponentAtIndex(content, parseResult.username());
-                    Style bodyStyle = getDominantStyle(split.body);
-                    Component translatedBody = Component.literal(translatedText).withStyle(bodyStyle);
+                    Component translatedBody = colorizeTranslatedText(split.body, translatedText);
                     finalComponent = Component.empty().append(split.prefix).append(translatedBody);
                 } else {
-                    Style msgStyle = getDominantStyle(content);
-                    finalComponent = Component.literal(translatedText).withStyle(msgStyle);
+                    finalComponent = colorizeTranslatedText(content, translatedText);
                 }
 
                 if (config.showOriginal) {
@@ -129,23 +127,73 @@ public class ChatTranslationController {
         }
     }
 
-    private Style getDominantStyle(Component component) {
-        class StyleHolder {
-            Style style = Style.EMPTY;
+    public static class TextSegment {
+        public final String text;
+        public final Style style;
+        public TextSegment(String text, Style style) {
+            this.text = text;
+            this.style = style;
         }
-        final StyleHolder holder = new StyleHolder();
-        component.visit((style, text) -> {
-            if (style != null && style.getColor() != null) {
-                holder.style = style;
-                return Optional.of(style);
+    }
+
+    private Component colorizeTranslatedText(Component original, String translatedText) {
+        List<TextSegment> segments = new ArrayList<>();
+        original.visit((style, text) -> {
+            if (!text.isEmpty()) {
+                segments.add(new TextSegment(text, style));
             }
             return Optional.empty();
         }, Style.EMPTY);
 
-        if (holder.style == Style.EMPTY) {
-            return component.getStyle();
+        List<TextSegment> merged = new ArrayList<>();
+        for (TextSegment seg : segments) {
+            if (merged.isEmpty()) {
+                merged.add(seg);
+            } else {
+                TextSegment last = merged.get(merged.size() - 1);
+                if (last.style.equals(seg.style)) {
+                    merged.set(merged.size() - 1, new TextSegment(last.text + seg.text, last.style));
+                } else {
+                    merged.add(seg);
+                }
+            }
         }
-        return holder.style;
+
+        int translatedIdx = 0;
+        var resultComponent = Component.empty().withStyle(original.getStyle());
+
+        for (int i = 0; i < merged.size(); i++) {
+            TextSegment seg = merged.get(i);
+            String segText = seg.text;
+            Style segStyle = seg.style;
+
+            String trimmed = segText.trim();
+            if (trimmed.length() < 2) {
+                continue;
+            }
+
+            if (trimmed.matches("^[A-Za-z0-9_\\-\\+\\(\\)\\[\\]\\{\\}⛃\\s,\\.!]+$")) {
+                int foundIdx = translatedText.indexOf(trimmed, translatedIdx);
+                if (foundIdx != -1) {
+                    if (foundIdx > translatedIdx) {
+                        String middleText = translatedText.substring(translatedIdx, foundIdx);
+                        Style middleStyle = (i > 0) ? merged.get(i - 1).style : segStyle;
+                        resultComponent.append(Component.literal(middleText).withStyle(middleStyle));
+                    }
+
+                    resultComponent.append(Component.literal(trimmed).withStyle(segStyle));
+                    translatedIdx = foundIdx + trimmed.length();
+                }
+            }
+        }
+
+        if (translatedIdx < translatedText.length()) {
+            String tailText = translatedText.substring(translatedIdx);
+            Style tailStyle = merged.isEmpty() ? Style.EMPTY : merged.get(merged.size() - 1).style;
+            resultComponent.append(Component.literal(tailText).withStyle(tailStyle));
+        }
+
+        return resultComponent;
     }
 
     public static SplitComponent splitComponentAtIndex(Component original, String username) {

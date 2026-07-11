@@ -89,10 +89,12 @@ public class ChatTranslationController {
                 Component finalComponent;
                 if (finalIsPlayer) {
                     SplitComponent split = splitComponentAtIndex(content, parseResult.username());
-                    Component translatedBody = Component.literal(translatedText).withStyle(split.body.getStyle());
+                    Style bodyStyle = getDominantStyle(split.body);
+                    Component translatedBody = Component.literal(translatedText).withStyle(bodyStyle);
                     finalComponent = Component.empty().append(split.prefix).append(translatedBody);
                 } else {
-                    finalComponent = Component.literal(translatedText).withStyle(content.getStyle());
+                    Style msgStyle = getDominantStyle(content);
+                    finalComponent = Component.literal(translatedText).withStyle(msgStyle);
                 }
 
                 if (config.showOriginal) {
@@ -125,6 +127,25 @@ public class ChatTranslationController {
             this.prefix = prefix;
             this.body = body;
         }
+    }
+
+    private Style getDominantStyle(Component component) {
+        class StyleHolder {
+            Style style = Style.EMPTY;
+        }
+        final StyleHolder holder = new StyleHolder();
+        component.visit((style, text) -> {
+            if (style != null && style.getColor() != null) {
+                holder.style = style;
+                return Optional.of(style);
+            }
+            return Optional.empty();
+        }, Style.EMPTY);
+
+        if (holder.style == Style.EMPTY) {
+            return component.getStyle();
+        }
+        return holder.style;
     }
 
     public static SplitComponent splitComponentAtIndex(Component original, String username) {

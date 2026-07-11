@@ -35,6 +35,19 @@ public final class MineTranslator {
 
         PlayerMessageParser.runParserTests();
 
+        try {
+            Class<?> keyEventClass = Class.forName("net.minecraft.client.input.KeyEvent");
+            TranslationDebugLogger.info("KeyEvent class inspection:");
+            for (var method : keyEventClass.getDeclaredMethods()) {
+                TranslationDebugLogger.info("  method: {}", method.toString());
+            }
+            for (var field : keyEventClass.getDeclaredFields()) {
+                TranslationDebugLogger.info("  field: {}", field.toString());
+            }
+        } catch (Exception e) {
+            TranslationDebugLogger.error("Failed to inspect KeyEvent class: {}", e.toString());
+        }
+
         ItemTooltipCallbacks.EVENT.register((stack, context, flag, lines) -> {
             TranslationDebugLogger.info("[MineTranslator v3] ItemTooltipCallback triggered for: {}", stack.getHoverName().getString());
             TooltipTranslationController.getInstance().onGetTooltip(stack, lines);

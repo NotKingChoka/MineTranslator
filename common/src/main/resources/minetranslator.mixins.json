@@ -6,7 +6,8 @@
     "client": [
         "ChatComponentMixin",
         "ClientPacketListenerMixin",
-        "ScreenMixin"
+        "ScreenMixin",
+        "KeyboardHandlerMixin"
     ],
     "mixins": [
     ],

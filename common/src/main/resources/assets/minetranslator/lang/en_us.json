@@ -98,5 +98,7 @@
   "MineTranslator.button.reset": "Reset",
   "MineTranslator.button.press_key": "Press any key...",
   "MineTranslator.error.conflict": "Warning: Key mapping conflict!",
-  "MineTranslator.tooltip.test_provider": "Test the configured provider credentials with a dummy request."
+  "MineTranslator.tooltip.test_provider": "Test the configured provider credentials with a dummy request.",
+  "MineTranslator.option.debug_logging": "Debug Logging",
+  "MineTranslator.desc.clear_cache": "Click below to clear the translation cache"
 }

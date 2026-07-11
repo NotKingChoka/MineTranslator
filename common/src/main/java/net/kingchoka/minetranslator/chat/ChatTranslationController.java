@@ -59,7 +59,15 @@ public class ChatTranslationController {
             mode = TranslationMode.PLAYER_CHAT;
         }
 
-        boolean shouldTranslate = force || config.autoTranslateEveryMessage || (isPlayer && config.autoTranslatePlayerMessages);
+        boolean isNPC = plainText.contains("[NPC]");
+        boolean shouldTranslate = force;
+        if (!shouldTranslate) {
+            if (config.translateOnlyNPC) {
+                shouldTranslate = isNPC;
+            } else {
+                shouldTranslate = config.autoTranslateEveryMessage || (isPlayer && config.autoTranslatePlayerMessages);
+            }
+        }
         if (!shouldTranslate) {
             return;
         }
@@ -87,8 +95,9 @@ public class ChatTranslationController {
                 TranslationDebugLogger.chat("Result received. ID: {}, Translated: {}", state.entryId, translatedText);
 
                 Component finalComponent;
+                SplitComponent split = null;
                 if (finalIsPlayer) {
-                    SplitComponent split = splitComponentAtIndex(content, parseResult.username());
+                    split = splitComponentAtIndex(content, parseResult.username());
                     Component translatedBody = colorizeTranslatedText(split.body, translatedText);
                     finalComponent = Component.empty().append(split.prefix).append(translatedBody);
                 } else {
@@ -96,11 +105,10 @@ public class ChatTranslationController {
                 }
 
                 if (config.showOriginal) {
+                    String origText = (finalIsPlayer && split != null) ? split.body.getString() : content.getString();
                     finalComponent = Component.empty()
                         .append(finalComponent)
-                        .append(Component.literal(" (")
-                            .append(content)
-                            .append(Component.literal(")"))
+                        .append(Component.literal(" (" + origText + ")")
                             .withStyle(Style.EMPTY.withColor(0x888888)));
                 }
 

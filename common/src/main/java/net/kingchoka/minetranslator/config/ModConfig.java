@@ -22,6 +22,8 @@ public class ModConfig {
     public boolean autoTranslateItemTooltips = false;
     public boolean showOriginal = false;
     public boolean debugLogging = true;
+    public boolean translateMyMessages = false;
+    public boolean translateOnlyNPC = false;
 
     public static ModConfig getInstance() {
         if (INSTANCE == null) {

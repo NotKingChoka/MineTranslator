@@ -14,63 +14,73 @@ public class MTConfigScreen {
         ModConfig config = ModConfig.getInstance();
         ConfigBuilder builder = ConfigBuilder.create()
             .setParentScreen(parent)
-            .setTitle(Component.literal("MineTranslator v3 Settings"));
+            .setTitle(Component.translatable("MineTranslator.screen.title"));
 
         ConfigEntryBuilder entryBuilder = builder.entryBuilder();
-        ConfigCategory general = builder.getOrCreateCategory(Component.literal("General"));
+        ConfigCategory general = builder.getOrCreateCategory(Component.translatable("MineTranslator.category.general"));
 
-        general.addEntry(entryBuilder.startStringDropdownMenu(Component.literal("Translation Provider"), config.provider)
+        general.addEntry(entryBuilder.startStringDropdownMenu(Component.translatable("MineTranslator.option.service"), config.provider)
             .setSelections(List.of("Google", "Fake", "DeepL", "Gemini", "Claude", "OpenAI"))
             .setDefaultValue("Google")
             .setSaveConsumer(val -> config.provider = val)
             .build());
 
-        general.addEntry(entryBuilder.startTextField(Component.literal("API Key"), config.apiKey)
+        general.addEntry(entryBuilder.startTextField(Component.translatable("MineTranslator.option.api_key"), config.apiKey)
             .setDefaultValue("")
             .setSaveConsumer(val -> config.apiKey = val)
             .build());
 
-        general.addEntry(entryBuilder.startTextField(Component.literal("Source Language"), config.sourceLanguage)
+        general.addEntry(entryBuilder.startTextField(Component.translatable("MineTranslator.option.source_language"), config.sourceLanguage)
             .setDefaultValue("auto")
             .setSaveConsumer(val -> config.sourceLanguage = val)
             .build());
 
-        general.addEntry(entryBuilder.startTextField(Component.literal("Target Language"), config.targetLanguage)
+        general.addEntry(entryBuilder.startTextField(Component.translatable("MineTranslator.option.target_language"), config.targetLanguage)
             .setDefaultValue("ru")
             .setSaveConsumer(val -> config.targetLanguage = val)
             .build());
 
-        general.addEntry(entryBuilder.startBooleanToggle(Component.literal("Auto Translate Every Chat Message"), config.autoTranslateEveryMessage)
+        general.addEntry(entryBuilder.startBooleanToggle(Component.translatable("MineTranslator.option.auto_chat"), config.autoTranslateEveryMessage)
             .setDefaultValue(false)
             .setSaveConsumer(val -> config.autoTranslateEveryMessage = val)
             .build());
 
-        general.addEntry(entryBuilder.startBooleanToggle(Component.literal("Auto Translate Player Messages"), config.autoTranslatePlayerMessages)
+        general.addEntry(entryBuilder.startBooleanToggle(Component.translatable("MineTranslator.option.auto_npc"), config.translateOnlyNPC)
+            .setDefaultValue(false)
+            .setSaveConsumer(val -> config.translateOnlyNPC = val)
+            .build());
+
+        general.addEntry(entryBuilder.startBooleanToggle(Component.translatable("MineTranslator.option.auto_player"), config.autoTranslatePlayerMessages)
             .setDefaultValue(false)
             .setSaveConsumer(val -> config.autoTranslatePlayerMessages = val)
             .build());
 
-        general.addEntry(entryBuilder.startBooleanToggle(Component.literal("Auto Translate Item Names"), config.autoTranslateItemNames)
+        general.addEntry(entryBuilder.startBooleanToggle(Component.translatable("MineTranslator.option.translate_my_messages"), config.translateMyMessages)
+            .setDefaultValue(false)
+            .setSaveConsumer(val -> config.translateMyMessages = val)
+            .build());
+
+        general.addEntry(entryBuilder.startBooleanToggle(Component.translatable("MineTranslator.option.auto_item_names"), config.autoTranslateItemNames)
             .setDefaultValue(false)
             .setSaveConsumer(val -> config.autoTranslateItemNames = val)
             .build());
 
-        general.addEntry(entryBuilder.startBooleanToggle(Component.literal("Auto Translate Item Tooltips"), config.autoTranslateItemTooltips)
+        general.addEntry(entryBuilder.startBooleanToggle(Component.translatable("MineTranslator.option.auto_item_tooltips"), config.autoTranslateItemTooltips)
             .setDefaultValue(false)
             .setSaveConsumer(val -> config.autoTranslateItemTooltips = val)
             .build());
 
-        general.addEntry(entryBuilder.startBooleanToggle(Component.literal("Show Original Text with Translation"), config.showOriginal)
+        general.addEntry(entryBuilder.startBooleanToggle(Component.translatable("MineTranslator.option.show_original"), config.showOriginal)
             .setDefaultValue(false)
             .setSaveConsumer(val -> config.showOriginal = val)
             .build());
 
-        general.addEntry(entryBuilder.startBooleanToggle(Component.literal("Debug Logging"), config.debugLogging)
+        general.addEntry(entryBuilder.startBooleanToggle(Component.translatable("MineTranslator.option.debug_logging"), config.debugLogging)
             .setDefaultValue(true)
             .setSaveConsumer(val -> config.debugLogging = val)
             .build());
 
-        general.addEntry(entryBuilder.startTextDescription(Component.literal("To clear translation cache, click below"))
+        general.addEntry(entryBuilder.startTextDescription(Component.translatable("MineTranslator.desc.clear_cache"))
             .build());
 
         builder.setSavingRunnable(() -> {

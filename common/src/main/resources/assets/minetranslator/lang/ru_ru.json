@@ -98,5 +98,7 @@
   "MineTranslator.button.reset": "Сбросить",
   "MineTranslator.button.press_key": "Нажмите любую клавишу...",
   "MineTranslator.error.conflict": "Внимание: Конфликт клавиш!",
-  "MineTranslator.tooltip.test_provider": "Отправляет тестовый запрос для проверки API ключа и URL."
+  "MineTranslator.tooltip.test_provider": "Отправляет тестовый запрос для проверки API ключа и URL.",
+  "MineTranslator.option.debug_logging": "Дебаг-логирование",
+  "MineTranslator.desc.clear_cache": "Нажмите ниже, чтобы очистить кэш перевода"
 }

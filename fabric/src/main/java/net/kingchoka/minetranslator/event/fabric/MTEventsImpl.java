@@ -16,9 +16,9 @@ public final class MTEventsImpl {
         ItemTooltipCallback.EVENT.register(ItemTooltipCallbacks.EVENT.merge()::getTooltip);
 
         ScreenEvents.AFTER_INIT.register((client, screen, scaledWidth, scaledHeight) -> {
-            ScreenKeyboardEvents.afterKeyPress(screen).register(ScreenCallbacks.KEY_PRESSED_POST.merge()::afterKeyPress);
+            ScreenKeyboardEvents.beforeKeyPress(screen).register(ScreenCallbacks.KEY_PRESSED_POST.merge()::afterKeyPress);
 
-            ScreenKeyboardEvents.afterKeyRelease(screen).register(ScreenCallbacks.KEY_RELEASED_POST.merge()::afterKeyRelease);
+            ScreenKeyboardEvents.beforeKeyRelease(screen).register(ScreenCallbacks.KEY_RELEASED_POST.merge()::afterKeyRelease);
 
             ScreenEvents.remove(screen).register(ScreenCallbacks.REMOVED.merge()::onRemove);
         });

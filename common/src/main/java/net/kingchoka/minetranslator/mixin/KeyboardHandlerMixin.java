@@ -57,7 +57,7 @@ public class KeyboardHandlerMixin {
         var mapping = MTKeyMappings.TRANSLATE_KEY;
         if (mapping == null) return false;
 
-        var keyObj = ((KeyMappingAccessor) mapping).MineTranslator$getKey();
+        var keyObj = mapping.key;
         if (keyObj == null) return false;
 
         int targetKey = keyObj.getValue();

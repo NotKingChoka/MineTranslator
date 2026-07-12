@@ -15,7 +15,6 @@ import net.kingchoka.minetranslator.api.IServiceProvider;
 import net.kingchoka.minetranslator.config.MTConfig;
 import net.kingchoka.minetranslator.core.*;
 import net.kingchoka.minetranslator.keybind.MTKeyMappings;
-import net.kingchoka.minetranslator.mixin.KeyMappingAccessor;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
@@ -817,7 +816,7 @@ public class MTConfigScreen extends Screen {
                 boolean hasConflict = false;
                 String conflictName = "";
                 for (KeyMapping mapping : Minecraft.getInstance().options.keyMappings) {
-                    InputConstants.Key bound = ((KeyMappingAccessor) mapping).MineTranslator$getKey();
+                    InputConstants.Key bound = mapping.key;
                     if (mapping != this.mappingToBind && bound.equals(newKey) && !bound.equals(InputConstants.UNKNOWN)) {
                         hasConflict = true;
                         conflictName = mapping.getName();

@@ -7,8 +7,7 @@
         "ChatComponentMixin",
         "ClientPacketListenerMixin",
         "ScreenMixin",
-        "KeyboardHandlerMixin",
-        "KeyMappingAccessor"
+        "KeyboardHandlerMixin"
     ],
     "mixins": [
     ],

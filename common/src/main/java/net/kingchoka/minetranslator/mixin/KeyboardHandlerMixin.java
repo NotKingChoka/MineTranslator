@@ -9,6 +9,7 @@ import net.kingchoka.minetranslator.keybind.MTKeyMappings;
 import net.kingchoka.minetranslator.tooltip.TooltipTranslationController;
 import net.kingchoka.minetranslator.chat.ChatTranslationController;
 import net.kingchoka.minetranslator.api.ChatComponentMixinAccessor;
+import net.kingchoka.minetranslator.debug.TranslationDebugLogger;
 import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -21,6 +22,7 @@ public class KeyboardHandlerMixin {
     @Inject(method = "keyPress", at = @At("HEAD"), cancellable = true)
     private void onKeyPress(long windowPointer, int key, int scancode, int action, int modifiers, CallbackInfo ci) {
         if (isTranslateKey(key, scancode)) {
+            TranslationDebugLogger.info("[KeyboardHandlerMixin] Translate key matched: key={}, scancode={}, action={}", key, scancode, action);
             if (action == 1) { // GLFW_PRESS
                 TooltipTranslationController.setTranslateKeyPressed(true);
                 

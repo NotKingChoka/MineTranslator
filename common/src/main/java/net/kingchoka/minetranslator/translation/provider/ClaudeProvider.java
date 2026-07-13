@@ -12,11 +12,15 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.function.Supplier;
 
 public class ClaudeProvider implements TranslationProvider {
+    private final Supplier<String> apiKeySupplier;
+    public ClaudeProvider() { this(() -> ModConfig.getInstance().apiKey); }
+    public ClaudeProvider(Supplier<String> apiKeySupplier) { this.apiKeySupplier = apiKeySupplier; }
     @Override
     public String translate(String text, String sourceLang, String targetLang) throws Exception {
-        String apiKey = ModConfig.getInstance().apiKey;
+        String apiKey = apiKeySupplier.get();
         if (apiKey == null || apiKey.isBlank()) {
             throw new IllegalStateException("Claude API key is not configured.");
         }

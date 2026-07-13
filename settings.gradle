@@ -10,5 +10,6 @@ pluginManagement {
 rootProject.name = 'minetranslator'
 
 include 'common'
+include 'library'
 include 'fabric'
 include 'neoforge'

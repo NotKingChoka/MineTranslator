@@ -1,0 +1,93 @@
+package net.kingchoka.minetranslatorport;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import net.fabricmc.loader.api.FabricLoader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.nio.charset.StandardCharsets;
+
+public class ModConfig {
+    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    private static ModConfig INSTANCE;
+
+    public String provider = "Google";
+    public String apiKey = "";
+    public String model = "";
+    public String baseUrl = "";
+    public int requestTimeoutSeconds = 5;
+    public String sourceLanguage = "auto";
+    public String targetLanguage = "ru";
+    public boolean autoTranslateEveryMessage = false;
+    public boolean autoTranslatePlayerMessages = false;
+    public boolean autoTranslateItemNames = false;
+    public boolean autoTranslateItemTooltips = false;
+    public boolean showOriginal = false;
+    public boolean debugLogging = true;
+    public boolean translateMyMessages = false;
+    public boolean translateOnlyNPC = false;
+    public boolean preserveFormatting = true;
+    public boolean useContext = false;
+    public int contextSize = 5;
+    public boolean translateItemLore = true;
+    public boolean translateItemAbilities = true;
+    public boolean translateItemStats = true;
+    public boolean preserveItemColors = true;
+    public boolean translateItemsOnHold = false;
+    public String outgoingSourceLanguage = "ru";
+    public boolean outgoingPreview = true;
+    public boolean replaceInputText = true;
+    public boolean sendAutomatically = false;
+    public boolean sendOriginalOnError = true;
+    public boolean outgoingPlayerContext = false;
+    public boolean fastTranslation = true;
+    public boolean cacheEnabled = true;
+    public int cacheMaxSize = 500;
+    public int parallelRequests = 3;
+    public boolean showMessageType = false;
+    public boolean showParserStrategy = false;
+    public boolean fakeProviderDebug = false;
+    public boolean translateEveryIncomingMessageDebug = false;
+
+    public static ModConfig getInstance() {
+        if (INSTANCE == null) {
+            load();
+        }
+        return INSTANCE;
+    }
+
+    public static void load() {
+        File configFile = getConfigFile();
+        if (configFile.exists()) {
+            try (FileReader reader = new FileReader(configFile, StandardCharsets.UTF_8)) {
+                INSTANCE = GSON.fromJson(reader, ModConfig.class);
+                if (INSTANCE == null) {
+                    INSTANCE = new ModConfig();
+                }
+            } catch (Exception e) {
+                INSTANCE = new ModConfig();
+            }
+        } else {
+            INSTANCE = new ModConfig();
+            INSTANCE.save();
+        }
+    }
+
+    public void save() {
+        File configFile = getConfigFile();
+        File parent = configFile.getParentFile();
+        if (parent != null && !parent.exists()) {
+            parent.mkdirs();
+        }
+        try (FileWriter writer = new FileWriter(configFile, StandardCharsets.UTF_8)) {
+            GSON.toJson(this, writer);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static File getConfigFile() {
+        return FabricLoader.getInstance().getConfigDir().resolve("minetranslator_v3.json").toFile();
+    }
+}

@@ -37,6 +37,17 @@ public class ChatTranslationController {
 
         ChatTranslationState state = ChatEntryStore.getInstance().getOrCreateState(guiMessage);
 
+        // Manual translation is a toggle: pressing the key on an already
+        // translated line restores the original GuiMessage.
+        if (force && state.status == ChatTranslationState.TranslationStatus.TRANSLATED) {
+            state.translatedText = null;
+            state.status = ChatTranslationState.TranslationStatus.ORIGINAL;
+            Minecraft.getInstance().execute(() ->
+                ((ChatComponentMixinAccessor) chat).MineTranslator$refreshTrimmedMessages()
+            );
+            return;
+        }
+
         if (force) {
             // Reset to allow re-translating with a different language or provider
             state.status = ChatTranslationState.TranslationStatus.ORIGINAL;
@@ -49,12 +60,14 @@ public class ChatTranslationController {
         boolean isPlayer = false;
         String textToTranslate = plainText;
         TranslationMode mode = TranslationMode.CHAT;
+        int prefixEndIndex = 0;
         int bodyStartIndex = 0;
 
         PlayerMessageParser.PlayerParseResult parseResult = PlayerMessageParser.parse(plainText);
         if (parseResult.success()) {
             isPlayer = true;
             textToTranslate = parseResult.body();
+            prefixEndIndex = parseResult.prefixEndIndex();
             bodyStartIndex = parseResult.bodyStartIndex();
             mode = TranslationMode.PLAYER_CHAT;
         }
@@ -62,11 +75,12 @@ public class ChatTranslationController {
         boolean isNPC = plainText.contains("[NPC]");
         boolean shouldTranslate = force;
         if (!shouldTranslate) {
-            if (config.translateOnlyNPC) {
-                shouldTranslate = isNPC;
-            } else {
-                shouldTranslate = config.autoTranslateEveryMessage || (isPlayer && config.autoTranslatePlayerMessages);
-            }
+            // These options are independent. Previously translateOnlyNPC
+            // overrode autoTranslatePlayerMessages completely, so enabling
+            // both silently disabled automatic player-chat translation.
+            shouldTranslate = config.autoTranslateEveryMessage
+                || (isPlayer && config.autoTranslatePlayerMessages)
+                || (isNPC && config.translateOnlyNPC);
         }
         if (!shouldTranslate) {
             return;
@@ -84,6 +98,7 @@ public class ChatTranslationController {
         );
 
         final boolean finalIsPlayer = isPlayer;
+        final int finalPrefixEndIndex = prefixEndIndex;
         final int finalBodyStartIndex = bodyStartIndex;
 
         state.status = ChatTranslationState.TranslationStatus.TRANSLATING;
@@ -97,9 +112,18 @@ public class ChatTranslationController {
                 Component finalComponent;
                 SplitComponent split = null;
                 if (finalIsPlayer) {
-                    split = splitComponentAtIndex(content, parseResult.username());
+                    split = splitPlayerComponent(content, finalPrefixEndIndex, finalBodyStartIndex);
                     Component translatedBody = colorizeTranslatedText(split.body, translatedText);
-                    finalComponent = Component.empty().append(split.prefix).append(translatedBody);
+                    var assembled = Component.empty().append(split.prefix);
+                    String preservedPrefix = split.prefix.getString();
+                    if (!preservedPrefix.isEmpty()
+                        && !Character.isWhitespace(preservedPrefix.charAt(preservedPrefix.length() - 1))) {
+                        assembled.append(Component.literal(" "));
+                    }
+                    assembled.append(Component.literal("[" + parseResult.username() + "] ")
+                        .withStyle(Style.EMPTY.withColor(0xAAAAAA)));
+                    assembled.append(translatedBody);
+                    finalComponent = assembled;
                 } else {
                     finalComponent = colorizeTranslatedText(content, translatedText);
                 }
@@ -202,6 +226,73 @@ public class ChatTranslationController {
         }
 
         return resultComponent;
+    }
+
+    public static SplitComponent splitComponentAtBodyIndex(Component original, int boundary) {
+        List<Component> leaves = new ArrayList<>();
+        original.visit((style, text) -> {
+            if (!text.isEmpty()) {
+                leaves.add(Component.literal(text).withStyle(style));
+            }
+            return Optional.empty();
+        }, Style.EMPTY);
+
+        var prefixComponent = Component.empty().withStyle(original.getStyle());
+        var bodyComponent = Component.empty().withStyle(original.getStyle());
+        int currentOffset = 0;
+
+        for (Component leaf : leaves) {
+            String leafText = leaf.getString();
+            Style leafStyle = leaf.getStyle();
+            int length = leafText.length();
+
+            if (currentOffset + length <= boundary) {
+                prefixComponent.append(leaf);
+            } else if (currentOffset >= boundary) {
+                bodyComponent.append(leaf);
+            } else {
+                int prefixLength = boundary - currentOffset;
+                if (prefixLength > 0) {
+                    prefixComponent.append(Component.literal(leafText.substring(0, prefixLength)).withStyle(leafStyle));
+                }
+                if (prefixLength < length) {
+                    bodyComponent.append(Component.literal(leafText.substring(prefixLength)).withStyle(leafStyle));
+                }
+            }
+            currentOffset += length;
+        }
+
+        return new SplitComponent(prefixComponent, bodyComponent);
+    }
+
+    public static SplitComponent splitPlayerComponent(Component original, int prefixEnd, int bodyStart) {
+        return new SplitComponent(
+            sliceComponent(original, 0, Math.max(0, prefixEnd)),
+            sliceComponent(original, Math.max(0, bodyStart), original.getString().length())
+        );
+    }
+
+    private static Component sliceComponent(Component original, int start, int end) {
+        var result = Component.empty().withStyle(original.getStyle());
+        final int[] offset = {0};
+
+        original.visit((style, text) -> {
+            int segmentStart = offset[0];
+            int segmentEnd = segmentStart + text.length();
+            int overlapStart = Math.max(start, segmentStart);
+            int overlapEnd = Math.min(end, segmentEnd);
+
+            if (overlapStart < overlapEnd) {
+                result.append(Component.literal(text.substring(
+                    overlapStart - segmentStart,
+                    overlapEnd - segmentStart
+                )).withStyle(style));
+            }
+            offset[0] = segmentEnd;
+            return Optional.empty();
+        }, Style.EMPTY);
+
+        return result;
     }
 
     public static SplitComponent splitComponentAtIndex(Component original, String username) {

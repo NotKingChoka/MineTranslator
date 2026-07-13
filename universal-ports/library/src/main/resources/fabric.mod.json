@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "minetranslatorlib",
+  "version": "${version}",
+  "name": "MineTranslator Library",
+  "description": "Standalone cross-version hooks for MineTranslator without Fabric API.",
+  "authors": ["NotKingChoka"],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["net.kingchoka.mtlib.fabric.MTLibraryMod"]
+  },
+  "mixins": ["minetranslator-library.mixins.json"],
+  "depends": {
+    "fabricloader": "*",
+    "minecraft": "=${minecraft_version}"
+  }
+}

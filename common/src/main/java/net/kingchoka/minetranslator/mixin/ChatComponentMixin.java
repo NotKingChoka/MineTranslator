@@ -2,8 +2,6 @@ package net.kingchoka.minetranslator.mixin;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.client.GuiMessage;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.GuiMessageTag;
@@ -30,7 +28,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.Arrays;
 import java.util.List;
 
-@Environment(EnvType.CLIENT)
 @Mixin(ChatComponent.class)
 public abstract class ChatComponentMixin implements ChatComponentMixinAccessor {
     @Unique
@@ -92,6 +89,13 @@ public abstract class ChatComponentMixin implements ChatComponentMixinAccessor {
 
     @WrapOperation(method = "addMessageToDisplayQueue(Lnet/minecraft/client/GuiMessage;)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/GuiMessage;splitLines(Lnet/minecraft/client/gui/Font;I)Ljava/util/List;"))
     private List<FormattedCharSequence> MineTranslator$wrapSplitLines(GuiMessage instance, Font font, int i, Operation<List<FormattedCharSequence>> original) {
+        // Some client mods add chat messages from worker threads. Font layout
+        // must only run on the render thread; rebuild the chat there instead.
+        if (!this.minecraft.isSameThread()) {
+            this.minecraft.execute(this::refreshTrimmedMessages);
+            return List.of();
+        }
+
         var state = ChatEntryStore.getInstance().getState(instance);
         List<FormattedCharSequence> toReturn;
         if (state != null && state.status == ChatTranslationState.TranslationStatus.TRANSLATED && state.translatedText != null) {
@@ -133,13 +137,17 @@ public abstract class ChatComponentMixin implements ChatComponentMixinAccessor {
     @Unique
     @Override
     public double MineTranslator$screenToChatX(double x) {
-        return x / this.getScale() - (double) 4.0F;
+        double guiX = x * this.minecraft.getWindow().getGuiScaledWidth()
+            / (double) this.minecraft.getWindow().getScreenWidth();
+        return guiX / this.getScale() - (double) 4.0F;
     }
 
     @Unique
     @Override
     public double MineTranslator$screenToChatY(double y) {
-        double d = (double) this.minecraft.getWindow().getGuiScaledHeight() - y - (double) 40.0F;
+        double guiY = y * this.minecraft.getWindow().getGuiScaledHeight()
+            / (double) this.minecraft.getWindow().getScreenHeight();
+        double d = (double) this.minecraft.getWindow().getGuiScaledHeight() - guiY - (double) 40.0F;
         return d / (this.getScale() * (double) this.getLineHeight());
     }
 

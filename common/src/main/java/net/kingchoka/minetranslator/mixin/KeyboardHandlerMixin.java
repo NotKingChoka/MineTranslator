@@ -3,11 +3,11 @@ package net.kingchoka.minetranslator.mixin;
 import net.minecraft.client.KeyboardHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.GuiMessage;
-import net.minecraft.client.gui.screens.Screen;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.kingchoka.minetranslator.keybind.MTKeyMappings;
 import net.kingchoka.minetranslator.tooltip.TooltipTranslationController;
 import net.kingchoka.minetranslator.chat.ChatTranslationController;
+import net.kingchoka.minetranslator.chat.ChatInputTranslationController;
 import net.kingchoka.minetranslator.api.ChatComponentMixinAccessor;
 import net.kingchoka.minetranslator.debug.TranslationDebugLogger;
 import org.lwjgl.glfw.GLFW;
@@ -22,13 +22,11 @@ public class KeyboardHandlerMixin {
     @Inject(method = "method_22676", at = @At("HEAD"), cancellable = true, remap = false)
     private void onKey(long windowPointer, int key, int scancode, int action, int modifiers, CallbackInfo ci) {
         if (isTranslateKey(key, scancode)) {
-            TranslationDebugLogger.info("[KeyboardHandlerMixin] Translate key matched: key={}, scancode={}, action={}", key, scancode, action);
             if (action == 1) { // GLFW_PRESS
-                TooltipTranslationController.setTranslateKeyPressed(true);
-                
-                // Handle chat translation under cursor if chat is open
                 Minecraft client = Minecraft.getInstance();
-                boolean chatTranslated = false;
+                boolean handled = false;
+
+                // 1. A visible chat line under the cursor has the highest priority.
                 if (client.gui != null && client.gui.getChat() != null) {
                     double mouseX = client.mouseHandler.xpos();
                     double mouseY = client.mouseHandler.ypos();
@@ -36,19 +34,25 @@ public class KeyboardHandlerMixin {
                         GuiMessage msg = ((ChatComponentMixinAccessor) client.gui.getChat()).MineTranslator$getMessageAt(mouseX, mouseY);
                         if (msg != null) {
                             ChatTranslationController.getInstance().translateMessage(msg, client.gui.getChat(), true);
-                            chatTranslated = true;
+                            handled = true;
+                        } else if (client.screen instanceof net.minecraft.client.gui.screens.ChatScreen) {
+                            TranslationDebugLogger.chat("No chat line under cursor at X={}, Y={}", mouseX, mouseY);
                         }
-                    } catch (Exception ignored) {}
+                    } catch (Exception e) {
+                        TranslationDebugLogger.warn("Failed to select chat line: {}", e.toString());
+                    }
                 }
 
-                // If chat message was successfully translated or if we are not typing in a text field,
-                // cancel the event to prevent typing the grave accent/Ё character.
-                boolean isFieldFocused = isTextFieldFocused(client.screen);
-                if (!isFieldFocused || chatTranslated) {
-                    ci.cancel();
+                // 2. With no hovered line, translate the current chat input.
+                if (!handled && client.screen instanceof net.minecraft.client.gui.screens.ChatScreen chatScreen) {
+                    handled = ChatInputTranslationController.getInstance().translateOrRestore(chatScreen);
                 }
-            } else if (action == 0) { // GLFW_RELEASE
-                TooltipTranslationController.setTranslateKeyPressed(false);
+
+                // 3. Otherwise the same key toggles the currently hovered item tooltip.
+                if (!handled) TooltipTranslationController.getInstance().requestManualTranslation();
+
+                // Never type the grave accent/Ё used as the translation shortcut.
+                ci.cancel();
             }
         }
     }
@@ -87,14 +91,4 @@ public class KeyboardHandlerMixin {
         return false;
     }
 
-    private boolean isTextFieldFocused(Screen screen) {
-        if (screen == null) return false;
-        var focused = screen.getFocused();
-        if (focused == null) return false;
-        String className = focused.getClass().getName().toLowerCase();
-        return className.contains("editbox") 
-            || className.contains("textfield") 
-            || className.contains("search") 
-            || className.contains("input");
-    }
 }

@@ -1,27 +1,36 @@
 package net.kingchoka.minetranslator.chat;
 
-import net.kingchoka.minetranslator.debug.TranslationDebugLogger;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.multiplayer.PlayerInfo;
-import java.util.Collection;
+
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class PlayerMessageParser {
+public final class PlayerMessageParser {
 
     private static final Pattern HYPIXEL_MESSAGE = Pattern.compile(
         "(?:^|.*\\s)\\[(?<head>[A-Za-z0-9_]{1,16}) head\\](?<username>[A-Za-z0-9_]{1,16}):\\s*(?<body>.*)$"
     );
 
+    private static final Pattern ANGLE_MESSAGE = Pattern.compile(
+        "^<(?<username>[A-Za-z0-9_]{1,16})>\\s*(?<body>.+)$"
+    );
+
+    private static final Pattern SIMPLE_MESSAGE = Pattern.compile(
+        "^(?<username>[A-Za-z0-9_]{1,16})\\s*[:\\u00BB\\u25B6]\\s*(?<body>.+)$"
+    );
+
+    private PlayerMessageParser() {}
+
     public record PlayerParseResult(
         boolean success,
         String username,
         String body,
+        int prefixEndIndex,
         int bodyStartIndex
     ) {
         public static PlayerParseResult failure() {
-            return new PlayerParseResult(false, null, null, -1);
+            return new PlayerParseResult(false, null, null, -1, -1);
         }
     }
 
@@ -30,106 +39,92 @@ public class PlayerMessageParser {
             return PlayerParseResult.failure();
         }
 
-        // 1. Hypixel head-marker parse
         Matcher matcher = HYPIXEL_MESSAGE.matcher(fullString);
+        if (matcher.matches() && matcher.group("head").equals(matcher.group("username"))) {
+            // Keep levels, ranks and the player-head component before the nick.
+            return fromMatcher(matcher, matcher.start("username"));
+        }
+
+        matcher = ANGLE_MESSAGE.matcher(fullString);
         if (matcher.matches()) {
-            String head = matcher.group("head");
-            String username = matcher.group("username");
-            String body = matcher.group("body");
-            if (head.equals(username)) {
-                int bodyStartIndex = fullString.indexOf(body);
-                return new PlayerParseResult(true, username, body, bodyStartIndex);
-            }
+            return fromMatcher(matcher, 0);
         }
 
-        // 2. Fallback parser: Find the first colon/arrow separator
-        int sepIdx = -1;
-        for (int i = 0; i < fullString.length(); i++) {
-            char c = fullString.charAt(i);
-            if (c == ':' || c == '»' || c == '▶') {
-                sepIdx = i;
-                break;
-            }
+        matcher = SIMPLE_MESSAGE.matcher(fullString);
+        if (matcher.matches()) {
+            return fromMatcher(matcher, 0);
         }
 
-        if (sepIdx != -1) {
-            String header = fullString.substring(0, sepIdx).trim();
-            String[] words = header.split("\\s+");
-            if (words.length > 0) {
-                String rawCandidate = words[words.length - 1].trim();
-                String candidate = rawCandidate.replaceAll("[\\[\\]\\(\\)\\{\\}]", "").trim();
-                
-                if (candidate.matches("^[a-zA-Z0-9_]{3,16}$")) {
-                    boolean isLocalPlayer = isPlayerInTabList(candidate);
-                    boolean isPrivateMessage = header.toLowerCase(Locale.ROOT).contains("from") || 
-                                               header.toLowerCase(Locale.ROOT).contains("to") || 
-                                               header.contains("сообщение");
-                    
-                    if (isLocalPlayer || isPrivateMessage) {
-                        int candidateIdx = fullString.lastIndexOf(rawCandidate, sepIdx);
-                        if (candidateIdx != -1) {
-                            int restIdx = sepIdx + 1;
-                            while (restIdx < fullString.length() && Character.isWhitespace(fullString.charAt(restIdx))) {
-                                restIdx++;
-                            }
-                            String body = fullString.substring(restIdx);
-                            return new PlayerParseResult(true, candidate, body, restIdx);
-                        }
-                    }
-                }
-            }
+        int separator = findSeparator(fullString);
+        if (separator < 0) {
+            return PlayerParseResult.failure();
         }
 
-        return PlayerParseResult.failure();
+        String header = fullString.substring(0, separator).trim();
+        String[] words = header.split("\\s+");
+        if (words.length == 0) {
+            return PlayerParseResult.failure();
+        }
+
+        String candidate = words[words.length - 1]
+            .replaceAll("^[^A-Za-z0-9_]+|[^A-Za-z0-9_]+$", "");
+        if (!candidate.matches("^[A-Za-z0-9_]{1,16}$")) {
+            return PlayerParseResult.failure();
+        }
+
+        String lowerHeader = header.toLowerCase(Locale.ROOT);
+        boolean privateMessage = lowerHeader.contains("from")
+            || lowerHeader.contains("to")
+            || lowerHeader.contains("от")
+            || lowerHeader.contains("для");
+        if (!isPlayerInTabList(candidate) && !privateMessage) {
+            return PlayerParseResult.failure();
+        }
+
+        int usernameStart = fullString.lastIndexOf(candidate, separator);
+        int bodyStart = separator + 1;
+        while (bodyStart < fullString.length() && Character.isWhitespace(fullString.charAt(bodyStart))) {
+            bodyStart++;
+        }
+        if (usernameStart < 0 || bodyStart >= fullString.length()) {
+            return PlayerParseResult.failure();
+        }
+
+        return new PlayerParseResult(
+            true,
+            candidate,
+            fullString.substring(bodyStart),
+            usernameStart,
+            bodyStart
+        );
+    }
+
+    private static PlayerParseResult fromMatcher(Matcher matcher, int prefixEndIndex) {
+        return new PlayerParseResult(
+            true,
+            matcher.group("username"),
+            matcher.group("body"),
+            prefixEndIndex,
+            matcher.start("body")
+        );
+    }
+
+    private static int findSeparator(String text) {
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c == ':' || c == '\u00BB' || c == '\u25B6') {
+                return i;
+            }
+        }
+        return -1;
     }
 
     private static boolean isPlayerInTabList(String username) {
         var connection = Minecraft.getInstance().getConnection();
-        if (connection != null) {
-            java.util.Collection<net.minecraft.client.multiplayer.PlayerInfo> players = connection.getOnlinePlayers();
-            for (net.minecraft.client.multiplayer.PlayerInfo player : players) {
-                if (player.getProfile().name().equalsIgnoreCase(username)) {
-                    return true;
-                }
-            }
+        if (connection == null) {
+            return false;
         }
-        return false;
-    }
-
-    public static void runParserTests() {
-        TranslationDebugLogger.info("Running PlayerMessageParser unit tests...");
-        String[] testStrings = {
-            "[3] [VIP] [inkobink head]inkobink: как получить эти цветные монеты над своим именем?",
-            "[421] ⛃ [MVP++] [Frank_lol_ head]Frank_lol_: selling for lbin - tax :D",
-            "[5oulKeeper head]5oulKeeper: you feel sad",
-            "[VIP] [Endersalt head]Endersalt: eating blues at map frfr",
-            "[PP4L head]PP4L: where ru kvon"
-        };
-        String[] expectedUsers = {
-            "inkobink", "Frank_lol_", "5oulKeeper", "Endersalt", "PP4L"
-        };
-        String[] expectedBodies = {
-            "как получить эти цветные монеты над своим именем?",
-            "selling for lbin - tax :D",
-            "you feel sad",
-            "eating blues at map frfr",
-            "where ru kvon"
-        };
-        
-        int passed = 0;
-        for (int i = 0; i < testStrings.length; i++) {
-            PlayerParseResult res = parse(testStrings[i]);
-            boolean matches = res.success() && res.username().equals(expectedUsers[i]) && res.body().equals(expectedBodies[i]);
-            if (matches) {
-                passed++;
-                TranslationDebugLogger.info("Test {} PASSED: User: '{}', Body: '{}'", i + 1, res.username(), res.body());
-            } else {
-                TranslationDebugLogger.error("Test {} FAILED!", i + 1);
-                TranslationDebugLogger.error("  Input:    {}", testStrings[i]);
-                TranslationDebugLogger.error("  Expected: User: '{}', Body: '{}'", expectedUsers[i], expectedBodies[i]);
-                TranslationDebugLogger.error("  Actual:   Success: {}, User: '{}', Body: '{}'", res.success(), res.username(), res.body());
-            }
-        }
-        TranslationDebugLogger.info("Parser tests completed. Passed: {}/{}", passed, testStrings.length);
+        return connection.getOnlinePlayers().stream()
+            .anyMatch(player -> player.getProfile().name().equalsIgnoreCase(username));
     }
 }

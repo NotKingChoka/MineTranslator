@@ -1,11 +1,10 @@
 package net.kingchoka.minetranslator.api;
 
-import me.shedaniel.autoconfig.ConfigData;
 import net.minecraft.client.gui.screens.Screen;
 
 /**
  * Obviously, a {@link Screen} provider.
- * It is also used to be a simple {@link ConfigData} decoy that provides a {@link Screen} without containing any data.
+ * Provides a MineTranslator screen without depending on an external config library.
  */
 public interface IScreenProvider {
     /**

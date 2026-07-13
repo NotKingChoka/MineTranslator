@@ -1,16 +1,11 @@
 package net.kingchoka.minetranslator;
 
-import net.kingchoka.minetranslator.chat.ChatTranslationController;
-import net.kingchoka.minetranslator.chat.PlayerMessageParser;
 import net.kingchoka.minetranslator.config.ModConfig;
 import net.kingchoka.minetranslator.debug.TranslationDebugLogger;
 import net.kingchoka.minetranslator.event.ClientTickCallbacks;
 import net.kingchoka.minetranslator.event.ItemTooltipCallbacks;
 import net.kingchoka.minetranslator.keybind.MTKeyMappings;
 import net.kingchoka.minetranslator.tooltip.TooltipTranslationController;
-import net.kingchoka.minetranslator.api.ChatComponentMixinAccessor;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.GuiMessage;
 import net.minecraft.client.gui.screens.Screen;
 
 public final class MineTranslator {
@@ -33,47 +28,12 @@ public final class MineTranslator {
         TranslationDebugLogger.info("[MineTranslator v3] Provider: " + config.provider);
         TranslationDebugLogger.info("[MineTranslator v3] Target language: " + config.targetLanguage);
 
-        PlayerMessageParser.runParserTests();
-
-
-
         ItemTooltipCallbacks.EVENT.register((stack, context, flag, lines) -> {
-            TranslationDebugLogger.info("[MineTranslator v3] ItemTooltipCallback triggered for: {}", stack.getHoverName().getString());
             TooltipTranslationController.getInstance().onGetTooltip(stack, lines);
         });
 
-        net.kingchoka.minetranslator.event.ScreenCallbacks.KEY_PRESSED_POST.register((screen, context) -> {
-            TranslationDebugLogger.info("[MineTranslator v3] KEY_PRESSED_POST triggered: {}", context);
-            boolean matchTranslate = MTKeyMappings.TRANSLATE_KEY.matches(context);
-            TranslationDebugLogger.info("[MineTranslator v3] Match state: TRANSLATE_KEY={}", matchTranslate);
-            if (matchTranslate) {
-                net.kingchoka.minetranslator.tooltip.TooltipTranslationController.setTranslateKeyPressed(true);
-                Minecraft client = Minecraft.getInstance();
-                double mouseX = client.mouseHandler.xpos();
-                double mouseY = client.mouseHandler.ypos();
-                try {
-                    GuiMessage msg = ((ChatComponentMixinAccessor) client.gui.getChat()).MineTranslator$getMessageAt(mouseX, mouseY);
-                    if (msg != null) {
-                        TranslationDebugLogger.chat("Manual translation triggered via screen keypress for message: {}", msg.content().getString());
-                        ChatTranslationController.getInstance().translateMessage(msg, client.gui.getChat(), true);
-                    } else {
-                        TranslationDebugLogger.chat("KEY_PRESSED_POST matched, but no message under mouse at X={}, Y={}", mouseX, mouseY);
-                    }
-                } catch (Exception e) {
-                    TranslationDebugLogger.chat("Failed to get chat message at X={}, Y={} in KEY_PRESSED_POST: {}", mouseX, mouseY, e.toString());
-                }
-            }
-        });
-
-        net.kingchoka.minetranslator.event.ScreenCallbacks.KEY_RELEASED_POST.register((screen, context) -> {
-            boolean matchTranslate = MTKeyMappings.TRANSLATE_KEY.matches(context);
-            if (matchTranslate) {
-                net.kingchoka.minetranslator.tooltip.TooltipTranslationController.setTranslateKeyPressed(false);
-            }
-        });
-
         net.kingchoka.minetranslator.event.ScreenCallbacks.REMOVED.register((screen) -> {
-            net.kingchoka.minetranslator.tooltip.TooltipTranslationController.setTranslateKeyPressed(false);
+            TooltipTranslationController.getInstance().clearManualTranslation();
         });
 
         ClientTickCallbacks.POST.register(client -> {
@@ -88,16 +48,6 @@ public final class MineTranslator {
                 }
             }
 
-            while (MTKeyMappings.TRANSLATE_KEY.consumeClick()) {
-                if (client.player == null) continue;
-                double mouseX = client.mouseHandler.xpos();
-                double mouseY = client.mouseHandler.ypos();
-                GuiMessage msg = ((ChatComponentMixinAccessor) client.gui.getChat()).MineTranslator$getMessageAt(mouseX, mouseY);
-                if (msg != null) {
-                    TranslationDebugLogger.chat("Manual translation triggered via client tick for message: {}", msg.content().getString());
-                    ChatTranslationController.getInstance().translateMessage(msg, client.gui.getChat(), true);
-                }
-            }
         });
     }
 }

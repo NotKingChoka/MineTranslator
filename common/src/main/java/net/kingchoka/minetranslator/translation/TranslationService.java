@@ -42,6 +42,14 @@ public class TranslationService {
         providers.put(id, provider);
     }
 
+    public int activeRequests() {
+        return translationExecutor instanceof ThreadPoolExecutor pool ? pool.getActiveCount() : 0;
+    }
+
+    public int queuedRequests() {
+        return translationExecutor instanceof ThreadPoolExecutor pool ? pool.getQueue().size() : 0;
+    }
+
     public CompletableFuture<TranslationResult> translate(TranslationRequest request) {
         return CompletableFuture.supplyAsync(() -> {
             String sourceText = request.sourceText();
@@ -79,7 +87,6 @@ public class TranslationService {
             }
 
             try {
-                TranslationDebugLogger.info("[REQUEST STARTED] Provider: {}, Text: {}", providerId, sourceText);
                 String translated = provider.translate(sourceText, request.sourceLanguage(), request.targetLanguage());
                 if (translated != null && !translated.isEmpty()) {
                     // 3. Put into cache

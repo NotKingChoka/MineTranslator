@@ -23,6 +23,8 @@ public class TranslationCache {
 
     private final int maxSize;
     private final Map<CacheKey, String> cacheMap;
+    private long hits;
+    private long misses;
 
     public TranslationCache(int maxSize) {
         this.maxSize = maxSize;
@@ -37,11 +39,10 @@ public class TranslationCache {
     public synchronized String get(String provider, TranslationMode mode, String sourceText, String sourceLanguage, String targetLanguage, int contextHash) {
         CacheKey key = new CacheKey(provider, mode, sourceText, sourceLanguage, targetLanguage, contextHash);
         if (cacheMap.containsKey(key)) {
-            String val = cacheMap.get(key);
-            TranslationDebugLogger.info("[CACHE HIT] Key: {} -> {}", key, val);
-            return val;
+            hits++;
+            return cacheMap.get(key);
         }
-        TranslationDebugLogger.info("[CACHE MISS] Key: {}", key);
+        misses++;
         return null;
     }
 
@@ -49,11 +50,25 @@ public class TranslationCache {
         if (translatedText == null) return;
         CacheKey key = new CacheKey(provider, mode, sourceText, sourceLanguage, targetLanguage, contextHash);
         cacheMap.put(key, translatedText);
-        TranslationDebugLogger.info("[CACHE STORE] Key: {} -> {}", key, translatedText);
     }
 
     public synchronized void clear() {
         cacheMap.clear();
+        hits = 0;
+        misses = 0;
         TranslationDebugLogger.info("[CACHE CLEAR] Cache was cleared.");
+    }
+
+    public synchronized int size() {
+        return cacheMap.size();
+    }
+
+    public int capacity() {
+        return maxSize;
+    }
+
+    public synchronized int hitRatePercent() {
+        long total = hits + misses;
+        return total == 0 ? 0 : (int) Math.round(hits * 100.0 / total);
     }
 }

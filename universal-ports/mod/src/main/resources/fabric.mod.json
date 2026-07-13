@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "minetranslator",
+  "version": "${version}",
+  "name": "MineTranslator",
+  "description": "Chat, item tooltip and chat input translation on one key.",
+  "authors": ["NotKingChoka"],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["net.kingchoka.minetranslatorport.MineTranslatorPort"],
+    "minetranslator-library": ["net.kingchoka.minetranslatorport.LibraryIntegration"]
+  },
+  "depends": {
+    "fabricloader": "*",
+    "minecraft": "=${minecraft_version}",
+    "minetranslatorlib": ">=${version}"
+  }
+}

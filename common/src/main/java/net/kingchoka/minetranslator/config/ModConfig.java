@@ -14,6 +14,9 @@ public class ModConfig {
 
     public String provider = "Google";
     public String apiKey = "";
+    public String model = "";
+    public String baseUrl = "";
+    public int requestTimeoutSeconds = 5;
     public String sourceLanguage = "auto";
     public String targetLanguage = "ru";
     public boolean autoTranslateEveryMessage = false;
@@ -24,6 +27,28 @@ public class ModConfig {
     public boolean debugLogging = true;
     public boolean translateMyMessages = false;
     public boolean translateOnlyNPC = false;
+    public boolean preserveFormatting = true;
+    public boolean useContext = false;
+    public int contextSize = 5;
+    public boolean translateItemLore = true;
+    public boolean translateItemAbilities = true;
+    public boolean translateItemStats = true;
+    public boolean preserveItemColors = true;
+    public boolean translateItemsOnHold = false;
+    public String outgoingSourceLanguage = "ru";
+    public boolean outgoingPreview = true;
+    public boolean replaceInputText = true;
+    public boolean sendAutomatically = false;
+    public boolean sendOriginalOnError = true;
+    public boolean outgoingPlayerContext = false;
+    public boolean fastTranslation = true;
+    public boolean cacheEnabled = true;
+    public int cacheMaxSize = 500;
+    public int parallelRequests = 3;
+    public boolean showMessageType = false;
+    public boolean showParserStrategy = false;
+    public boolean fakeProviderDebug = false;
+    public boolean translateEveryIncomingMessageDebug = false;
 
     public static ModConfig getInstance() {
         if (INSTANCE == null) {

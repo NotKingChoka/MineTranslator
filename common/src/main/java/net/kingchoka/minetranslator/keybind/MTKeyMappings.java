@@ -17,24 +17,10 @@ public final class MTKeyMappings {
             Categories.GENERAL
     );
 
-    public static final KeyMapping TRANSLATE_INPUT_KEY = register(
-            "key.MineTranslator.translate_input",
-            InputConstants.Type.KEYSYM,
-            GLFW.GLFW_KEY_Y,
-            Categories.GENERAL
-    );
-
     public static final KeyMapping CONFIG_KEY = register(
             "key.MineTranslator.config",
             InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_O,
-            Categories.GENERAL
-    );
-
-    public static final KeyMapping FAST_TRANSLATE_KEY = register(
-            "key.MineTranslator.fast_translate",
-            InputConstants.Type.KEYSYM,
-            GLFW.GLFW_KEY_F,
             Categories.GENERAL
     );
 

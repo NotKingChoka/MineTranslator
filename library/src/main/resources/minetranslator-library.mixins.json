@@ -1,0 +1,16 @@
+{
+  "required": true,
+  "package": "net.kingchoka.minetranslatorlib.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "minVersion": "0.8",
+  "client": [
+    "MinecraftClientMixin",
+    "ItemStackTooltipMixin",
+    "ScreenLifecycleMixin",
+    "OptionsKeyMappingsMixin",
+    "PackRepositoryMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

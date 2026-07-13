@@ -11,11 +11,15 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.function.Supplier;
 
 public class DeepLProvider implements TranslationProvider {
+    private final Supplier<String> apiKeySupplier;
+    public DeepLProvider() { this(() -> ModConfig.getInstance().apiKey); }
+    public DeepLProvider(Supplier<String> apiKeySupplier) { this.apiKeySupplier = apiKeySupplier; }
     @Override
     public String translate(String text, String sourceLang, String targetLang) throws Exception {
-        String apiKey = ModConfig.getInstance().apiKey;
+        String apiKey = apiKeySupplier.get();
         if (apiKey == null || apiKey.isBlank()) {
             throw new IllegalStateException("DeepL API key is not configured.");
         }

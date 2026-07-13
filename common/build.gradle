@@ -7,18 +7,7 @@ loom {
 }
 
 dependencies {
-    // For using @Environment and EnvType
+    // Compile-time Mixin annotations. Fabric Loader is the loader itself,
+    // not Fabric API, and is never bundled into MineTranslator.
     modCompileOnly "net.fabricmc:fabric-loader:$fabric_loader_version"
-
-    modCompileOnly "me.shedaniel.cloth:cloth-config:$cloth_config_version"
-
-    // JEI, REI, EMI? (Unused)
-//    modCompileOnly "mezz.jei:jei-$minecraft_version-common-api:$jei_version"  // (Loom version is too high)
-//    modCompileOnly "me.shedaniel:RoughlyEnoughItems-api:$rei_version"
-
-    // Jade (using neoforge)
-    modCompileOnly "maven.modrinth:jade:$jade_neoforge_version"
-
-    // Wynntils (using fabric
-    modCompileOnly "maven.modrinth:wynntils:$wynntils_fabric_version"
 }

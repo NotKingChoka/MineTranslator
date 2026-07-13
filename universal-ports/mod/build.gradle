@@ -1,0 +1,21 @@
+base {
+    archivesName = "MineTranslator-${minecraft_version}"
+}
+
+if (minecraft_version.toString() == '1.16.5') {
+    sourceSets.main.java.srcDir 'src/1.16.5/java'
+}
+
+dependencies {
+    compileOnly project(path: ':library', configuration: 'namedElements')
+    runtimeOnly project(path: ':library', configuration: 'namedElements')
+    compileOnly 'com.google.code.gson:gson:2.8.0'
+}
+
+processResources {
+    inputs.property 'version', mod_version
+    inputs.property 'minecraft_version', minecraft_version
+    filesMatching('fabric.mod.json') {
+        expand(version: mod_version, minecraft_version: minecraft_version)
+    }
+}

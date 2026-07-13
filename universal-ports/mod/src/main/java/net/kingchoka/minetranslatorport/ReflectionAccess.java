@@ -469,8 +469,8 @@ public final class ReflectionAccess {
             } catch (Exception ignored) {}
         } catch (Exception exception) {
             restoreScreen(client, parent);
-            System.out.println("[MineTranslator] Failed to open custom config: "
-                + rootCause(exception).getClass().getSimpleName());
+            System.out.println("[MineTranslator] Failed to open custom config:");
+            exception.printStackTrace(System.out);
             return;
         }
         openControls(client);

@@ -69,8 +69,11 @@ public final class PortController {
         );
 
         if (key == ReflectionAccess.configKeyCode()) {
-            ReflectionAccess.openMineTranslatorConfig(client);
-            return true;
+            Object screen = ReflectionAccess.currentScreen(client);
+            if (screen == null) {
+                ReflectionAccess.openMineTranslatorConfig(client);
+                return true;
+            }
         }
 
         int translateKey = ReflectionAccess.translateKeyCode();

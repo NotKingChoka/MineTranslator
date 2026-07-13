@@ -270,13 +270,17 @@ public final class PortController {
 
     private void toggleHoveredChat(Object client) {
         final ChatRecord record;
+        final int newestOffset;
         synchronized (chat) {
             if (chat.isEmpty()) return;
-            int newestOffset = ReflectionAccess.hoveredChatIndex(client, chat.size());
+            Object chatHud = chat.get(chat.size() - 1).chatHud;
+            newestOffset = ReflectionAccess.hoveredChatIndex(client, chatHud, chat.size());
             int index = chat.size() - 1 - Math.max(0, newestOffset);
             if (index < 0 || index >= chat.size()) return;
             record = chat.get(index);
         }
+        System.out.println("[MineTranslator] Manual chat toggle: row=" + newestOffset
+            + ", text=" + record.originalText);
         if (record.translated != null) {
             record.active = !record.active;
             Object targetComponent = record.active 

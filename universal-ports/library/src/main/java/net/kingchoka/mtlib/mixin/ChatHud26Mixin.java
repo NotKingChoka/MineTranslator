@@ -12,10 +12,16 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(targets = "net.minecraft.client.gui.components.ChatComponent", remap = false)
 public abstract class ChatHud26Mixin {
     @Inject(
-        method = "addMessage(Lnet/minecraft/network/chat/Component;)V",
+        method = "addMessage(Lnet/minecraft/network/chat/Component;Lnet/minecraft/network/chat/MessageSignature;Lnet/minecraft/client/multiplayer/chat/GuiMessageSource;Lnet/minecraft/client/multiplayer/chat/GuiMessageTag;)V",
         at = @At("HEAD"), cancellable = true, require = 0, remap = false
     )
-    private void minetranslatorlib$chat26(@Coerce Object message, CallbackInfo ci) {
+    private void minetranslatorlib$chat26(
+        @Coerce Object message,
+        @Coerce Object signature,
+        @Coerce Object source,
+        @Coerce Object tag,
+        CallbackInfo ci
+    ) {
         if (MTLibrary.fireChat(this, message)) ci.cancel();
     }
 }

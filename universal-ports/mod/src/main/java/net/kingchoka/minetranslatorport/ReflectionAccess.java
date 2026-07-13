@@ -22,6 +22,15 @@ public final class ReflectionAccess {
     private static Object configKeyMapping;
     private static boolean keyMappingsRegistered;
 
+    private static sun.misc.Unsafe unsafe;
+    static {
+        try {
+            Field theUnsafe = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
+            theUnsafe.setAccessible(true);
+            unsafe = (sun.misc.Unsafe) theUnsafe.get(null);
+        } catch (Exception ignored) {}
+    }
+
     private ReflectionAccess() {}
 
     static synchronized void ensureKeyMappings(Object client, File gameDirectory) {
@@ -492,21 +501,49 @@ public final class ReflectionAccess {
         if (result == null) call(chatHud, "clearMessages", true);
     }
 
-    static int hoveredChatIndex(Object client, int available) {
-        if (client == null || available <= 0) return -1;
+    static int hoveredChatIndex(Object client, Object chatHud, int available) {
+        if (client == null || chatHud == null || available <= 0) return -1;
         try {
             Object window = call(client, "method_22683");
             Object mouse = findFieldValue(client, "net.minecraft.class_312");
             if (window == null) window = call(client, "getWindow");
             if (mouse == null) mouse = findFieldValue(client, "net.minecraft.client.MouseHandler");
+            Number mouseX = (Number) call(mouse, "method_1603");
             Number mouseY = (Number) call(mouse, "method_1604");
-            Number scaledHeight = (Number) call(window, "method_4486");
+            Number scaledHeight = (Number) call(window, "method_4502");
+            Number scaledWidth = (Number) call(window, "method_4480");
+            Number width = (Number) call(window, "method_4489");
             Number height = (Number) call(window, "method_4494");
+            if (mouseX == null) mouseX = (Number) call(mouse, "xpos");
             if (mouseY == null) mouseY = (Number) call(mouse, "ypos");
             if (scaledHeight == null) scaledHeight = (Number) call(window, "getGuiScaledHeight");
+            if (scaledWidth == null) scaledWidth = (Number) call(window, "getGuiScaledWidth");
+            if (scaledHeight == null) scaledHeight = (Number) call(window, "method_4486");
+            if (width == null) width = (Number) call(window, "getWidth");
             if (height == null) height = (Number) call(window, "getHeight");
             if (mouseY == null || scaledHeight == null || height == null || height.doubleValue() == 0) return 0;
+            double x = mouseX != null && scaledWidth != null && width != null && width.doubleValue() != 0
+                ? mouseX.doubleValue() * scaledWidth.doubleValue() / width.doubleValue()
+                : 0.0;
             double y = mouseY.doubleValue() * scaledHeight.doubleValue() / height.doubleValue();
+
+            // 1.19.2 ChatHud already contains the exact chat-scale, line-spacing and
+            // scroll-aware coordinate conversion. Using it avoids selecting another
+            // message when GUI scale or chat spacing differs from the defaults.
+            Object transformedX = call(chatHud, "method_44722", x);
+            Object transformedY = call(chatHud, "method_44724", y);
+            if (transformedY instanceof Number) {
+                Object visibleIndex = transformedX instanceof Number
+                    ? call(chatHud, "method_44725", ((Number) transformedX).doubleValue(), ((Number) transformedY).doubleValue())
+                    : null;
+                if (!(visibleIndex instanceof Number)) {
+                    visibleIndex = call(chatHud, "method_44725", ((Number) transformedY).doubleValue());
+                }
+                if (visibleIndex instanceof Number && ((Number) visibleIndex).intValue() >= 0) {
+                    return Math.min(((Number) visibleIndex).intValue(), available - 1);
+                }
+            }
+
             int index = (int) Math.floor((scaledHeight.doubleValue() - 40.0 - y) / 9.0);
             if (index < 0) index = 0;
             return Math.min(index, available - 1);
@@ -611,105 +648,121 @@ public final class ReflectionAccess {
         return null;
     }
 
+    private static Object getFieldValueUnsafe(Object owner, Field field) {
+        if (unsafe == null) return null;
+        long offset = unsafe.objectFieldOffset(field);
+        Class<?> type = field.getType();
+        if (type == int.class) return unsafe.getInt(owner, offset);
+        if (type == long.class) return unsafe.getLong(owner, offset);
+        if (type == boolean.class) return unsafe.getBoolean(owner, offset);
+        if (type == float.class) return unsafe.getFloat(owner, offset);
+        if (type == double.class) return unsafe.getDouble(owner, offset);
+        if (type == char.class) return unsafe.getChar(owner, offset);
+        if (type == byte.class) return unsafe.getByte(owner, offset);
+        if (type == short.class) return unsafe.getShort(owner, offset);
+        return unsafe.getObject(owner, offset);
+    }
+
+    private static void setFieldValueUnsafe(Object owner, Field field, Object value) {
+        if (unsafe == null) return;
+        long offset = unsafe.objectFieldOffset(field);
+        Class<?> type = field.getType();
+        if (type == int.class) unsafe.putInt(owner, offset, ((Number) value).intValue());
+        else if (type == long.class) unsafe.putLong(owner, offset, ((Number) value).longValue());
+        else if (type == boolean.class) unsafe.putBoolean(owner, offset, (Boolean) value);
+        else if (type == float.class) unsafe.putFloat(owner, offset, ((Number) value).floatValue());
+        else if (type == double.class) unsafe.putDouble(owner, offset, ((Number) value).doubleValue());
+        else if (type == char.class) unsafe.putChar(owner, offset, (Character) value);
+        else if (type == byte.class) unsafe.putByte(owner, offset, ((Number) value).byteValue());
+        else if (type == short.class) unsafe.putShort(owner, offset, ((Number) value).shortValue());
+        else unsafe.putObject(owner, offset, value);
+    }
+
+    private static Object cloneAndReplaceField(Object entry, Field targetField, Object newValue) throws Exception {
+        if (unsafe == null) throw new IllegalStateException("Unsafe not available");
+        Class<?> clazz = entry.getClass();
+        Object replacement = unsafe.allocateInstance(clazz);
+        for (Field f : allFields(clazz)) {
+            if (Modifier.isStatic(f.getModifiers())) continue;
+            long offset = unsafe.objectFieldOffset(f);
+            if (f.equals(targetField)) {
+                setFieldValueUnsafe(replacement, f, newValue);
+            } else {
+                Object val = getFieldValueUnsafe(entry, f);
+                setFieldValueUnsafe(replacement, f, val);
+            }
+        }
+        return replacement;
+    }
+
     @SuppressWarnings("unchecked")
     static void replaceMessageInChat(Object chatHud, String originalText, Object translatedComponent) {
         if (chatHud == null || originalText == null || translatedComponent == null) return;
         try {
             boolean found = false;
             for (Field field : chatHud.getClass().getDeclaredFields()) {
-                if (field.getType() == List.class) {
-                    field.setAccessible(true);
-                    List<Object> messages = (List<Object>) field.get(chatHud);
-                    if (messages == null || messages.isEmpty()) continue;
-                    
-                    System.out.println("[MineTranslator Debug] replaceMessageInChat scanning list: \"" + field.getName() + "\", size: " + messages.size());
-                    for (int i = messages.size() - 1; i >= 0; i--) {
-                        Object entry = messages.get(i);
-                        if (entry == null) continue;
-                        
-                        System.out.println("[MineTranslator Debug] List \"" + field.getName() + "\" entry " + i + " class: " + entry.getClass().getName());
-                        for (Field f : entry.getClass().getDeclaredFields()) {
-                            try {
-                                f.setAccessible(true);
-                                Object val = f.get(entry);
-                                System.out.println("[MineTranslator Debug]   Field: name=" + f.getName() + ", type=" + f.getType().getName() + ", valueClass=" + (val == null ? "null" : val.getClass().getName()));
-                            } catch (Exception ignored) {}
-                        }
+                if (field.getType() != List.class) continue;
+                field.setAccessible(true);
+                List<Object> messages = (List<Object>) field.get(chatHud);
+                if (messages == null || messages.isEmpty()) continue;
 
-                        Object entryComp = null;
-                        Field compField = null;
-                        for (Field f : entry.getClass().getDeclaredFields()) {
-                            if (hasClassInHierarchy(f.getType(), "net.minecraft.class_2561")
-                                || hasClassInHierarchy(f.getType(), "net.minecraft.network.chat.Component")) {
-                                f.setAccessible(true);
-                                Object val = null;
-                                try { val = f.get(entry); } catch (Exception ignored) {}
-                                String valText = text(val);
-                                System.out.println("[MineTranslator Debug] List \"" + field.getName() + "\" entry " + i + " field " + f.getName() + " text: \"" + valText + "\"");
-                                if (valText != null && valText.equals(originalText)) {
-                                    compField = f;
-                                    entryComp = val;
-                                    break;
-                                }
-                            }
+                for (int i = messages.size() - 1; i >= 0 && !found; i--) {
+                    Object entry = messages.get(i);
+                    if (entry == null) continue;
+
+                    Field compField = null;
+                    for (Field candidate : allFields(entry.getClass())) {
+                        if (Modifier.isStatic(candidate.getModifiers())) continue;
+                        Object value = getFieldValueUnsafe(entry, candidate);
+                        if (value == null) continue;
+                        if (!hasClassInHierarchy(candidate.getType(), "net.minecraft.class_2561")
+                            && !hasClassInHierarchy(candidate.getType(), "net.minecraft.network.chat.Component")
+                            && !hasClassInHierarchy(value, "net.minecraft.class_2561")
+                            && !hasClassInHierarchy(value, "net.minecraft.network.chat.Component")) {
+                            continue;
                         }
-                        
-                        if (compField != null) {
-                            System.out.println("[MineTranslator Debug] Found matching message in list \"" + field.getName() + "\" at index " + i + ". Class: " + entry.getClass().getName());
-                            found = true;
-                            if (entry.getClass().isRecord() || Modifier.isFinal(compField.getModifiers())) {
-                                Constructor<?>[] constructors = entry.getClass().getDeclaredConstructors();
-                                Constructor<?> best = null;
-                                for (Constructor<?> c : constructors) {
-                                    if (best == null || c.getParameterTypes().length > best.getParameterTypes().length) {
-                                        best = c;
-                                    }
-                                }
-                                if (best != null) {
-                                    best.setAccessible(true);
-                                    Object[] args = new Object[best.getParameterTypes().length];
-                                    Field[] fields = entry.getClass().getDeclaredFields();
-                                    for (int j = 0; j < args.length; j++) {
-                                        fields[j].setAccessible(true);
-                                        if (fields[j] == compField) {
-                                            args[j] = translatedComponent;
-                                        } else {
-                                            args[j] = fields[j].get(entry);
-                                        }
-                                    }
-                                    Object newEntry = best.newInstance(args);
-                                    messages.set(i, newEntry);
-                                    System.out.println("[MineTranslator Debug] Replaced entry with recreated Record!");
-                                }
-                            } else {
-                                compField.set(entry, translatedComponent);
-                                System.out.println("[MineTranslator Debug] Replaced field value in place!");
-                            }
+                        if (originalText.equals(text(value))) {
+                            compField = candidate;
                             break;
                         }
                     }
+
+                    if (compField == null) continue;
+                    Object replacement = cloneAndReplaceField(entry, compField, translatedComponent);
+                    messages.set(i, replacement);
+                    found = true;
                 }
+                if (found) break;
             }
 
             if (found) {
-                System.out.println("[MineTranslator Debug] Refreshing chat lines...");
-                try {
-                    invokeStrict(chatHud, "method_44811");
-                } catch (NoSuchMethodException e) {
-                    try {
-                        invokeStrict(chatHud, "refreshTrimmedMessages");
-                    } catch (NoSuchMethodException ex) {
-                        try {
-                            invokeStrict(chatHud, "method_1808");
-                        } catch (Exception ignored) {}
-                    }
-                }
+                refreshVisibleChat(chatHud);
+                System.out.println("[MineTranslator] Chat line translated and refreshed.");
             } else {
-                System.out.println("[MineTranslator Debug] Match NOT found in any List field!");
+                System.out.println("[MineTranslator] Chat line was no longer available for replacement.");
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            System.out.println("[MineTranslator] Failed to replace chat line: "
+                + rootCause(e).getClass().getSimpleName());
+            rootCause(e).printStackTrace();
         }
+    }
+
+    private static void refreshVisibleChat(Object chatHud) throws Exception {
+        // Minecraft 1.19.2: ChatHud.method_44813 clears visible OrderedText rows and
+        // rebuilds them from the signed-message history. method_44811 adds a message
+        // and method_1808 clears the chat, so neither is a valid refresh operation.
+        String[] refreshMethods = {"method_44813", "method_1817", "refreshTrimmedMessages", "refreshTrimmedMessage"};
+        NoSuchMethodException missing = null;
+        for (String method : refreshMethods) {
+            try {
+                invokeStrict(chatHud, method);
+                return;
+            } catch (NoSuchMethodException exception) {
+                missing = exception;
+            }
+        }
+        if (missing != null) throw missing;
     }
 
     private static boolean hasClassInHierarchy(Object value, String className) {

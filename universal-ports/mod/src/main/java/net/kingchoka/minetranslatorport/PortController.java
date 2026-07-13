@@ -20,7 +20,46 @@ import java.util.regex.Pattern;
 public final class PortController {
     private static final PortController INSTANCE = new PortController();
     private static final long TOOLTIP_KEY_WINDOW_MS = 3000L;
-    private static final Pattern PLAYER_MESSAGE = Pattern.compile("^(\\s*\\[[^\\]]+\\]\\s*)(.+)$", Pattern.DOTALL);
+    public static class ParseResult {
+        public final boolean success;
+        public final String prefix;
+        public final String body;
+        
+        public ParseResult(boolean success, String prefix, String body) {
+            this.success = success;
+            this.prefix = prefix;
+            this.body = body;
+        }
+    }
+
+    private static final Pattern HYPIXEL_MSG = Pattern.compile(
+        "^(.*?\\[([A-Za-z0-9_]{1,16}) head\\][A-Za-z0-9_]{1,16}:\\s*)(.*)$", Pattern.DOTALL
+    );
+    private static final Pattern ANGLE_MSG = Pattern.compile(
+        "^(<([A-Za-z0-9_]{1,16})>\\s*)(.+)$", Pattern.DOTALL
+    );
+    private static final Pattern SIMPLE_MSG = Pattern.compile(
+        "^(([A-Za-z0-9_]{1,16})\\s*[:\\u00BB\\u25B6]\\s*)(.+)$", Pattern.DOTALL
+    );
+
+    public static ParseResult parsePlayerMessage(String text) {
+        if (text == null || text.trim().isEmpty()) {
+            return new ParseResult(false, null, null);
+        }
+        Matcher matcher = HYPIXEL_MSG.matcher(text);
+        if (matcher.matches()) {
+            return new ParseResult(true, matcher.group(1), matcher.group(3));
+        }
+        matcher = ANGLE_MSG.matcher(text);
+        if (matcher.matches()) {
+            return new ParseResult(true, matcher.group(1), matcher.group(3));
+        }
+        matcher = SIMPLE_MSG.matcher(text);
+        if (matcher.matches()) {
+            return new ParseResult(true, matcher.group(1), matcher.group(3));
+        }
+        return new ParseResult(false, null, null);
+    }
     private static final Pattern TARGET_LANGUAGE = Pattern.compile("\\\"targetLanguage\\\"\\s*:\\s*\\\"([^\\\"]+)\\\"");
     private static final Pattern AUTO_PLAYERS = Pattern.compile("\\\"autoTranslatePlayerMessages\\\"\\s*:\\s*(true|false)");
 
@@ -118,13 +157,24 @@ public final class PortController {
             while (chat.size() > 250) chat.remove(0);
         }
 
-        Matcher matcher = PLAYER_MESSAGE.matcher(source);
-        if (!autoTranslatePlayerMessages() || !matcher.matches()) return false;
+        ParseResult parse = parsePlayerMessage(source);
+        boolean isPlayer = parse.success;
+        boolean isNPC = source.contains("[NPC]");
 
-        final String prefix = matcher.group(1);
-        final String body = matcher.group(2);
-        GoogleTranslator.translate(body, "auto", targetLanguage()).thenAccept(translated -> {
-            record.translated = prefix + translated;
+        boolean shouldTranslate = ModConfig.getInstance().autoTranslateEveryMessage
+            || (isPlayer && ModConfig.getInstance().autoTranslatePlayerMessages)
+            || (isNPC && ModConfig.getInstance().translateOnlyNPC);
+
+        if (!shouldTranslate) return false;
+
+        String textToTranslate = isPlayer ? parse.body : source;
+
+        GoogleTranslator.translate(textToTranslate, "auto", targetLanguage()).thenAccept(translated -> {
+            if (isPlayer) {
+                record.translated = parse.prefix + translated;
+            } else {
+                record.translated = translated;
+            }
             record.active = true;
             renderTasks.add(() -> rebuildChat(chatHud));
         });
@@ -218,8 +268,15 @@ public final class PortController {
             rebuildChat(record.chatHud);
             return;
         }
-        GoogleTranslator.translate(record.originalText, "auto", targetLanguage()).thenAccept(translated -> {
-            record.translated = translated;
+        ParseResult parse = parsePlayerMessage(record.originalText);
+        final boolean isPlayer = parse.success;
+        String textToTranslate = isPlayer ? parse.body : record.originalText;
+        GoogleTranslator.translate(textToTranslate, "auto", targetLanguage()).thenAccept(translated -> {
+            if (isPlayer) {
+                record.translated = parse.prefix + translated;
+            } else {
+                record.translated = translated;
+            }
             record.active = true;
             renderTasks.add(() -> rebuildChat(record.chatHud));
         });

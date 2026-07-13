@@ -488,8 +488,8 @@ public final class ReflectionAccess {
     }
 
     static void clearChat(Object chatHud) {
-        Object result = call(chatHud, "method_1805", false);
-        if (result == null) call(chatHud, "clearMessages", false);
+        Object result = call(chatHud, "method_1805", true);
+        if (result == null) call(chatHud, "clearMessages", true);
     }
 
     static int hoveredChatIndex(Object client, int available) {

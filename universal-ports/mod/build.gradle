@@ -2,13 +2,16 @@ base {
     archivesName = "MineTranslator-${minecraft_version}"
 }
 
-def isLegacy = minecraft_version.toString().startsWith("1.19") ||
-               minecraft_version.toString().startsWith("1.18") ||
+def isLegacy = minecraft_version.toString().startsWith("1.18") ||
                minecraft_version.toString().startsWith("1.17") ||
                minecraft_version.toString() == "1.16.5"
 
-if (isLegacy) {
+def needsLegacySrc = minecraft_version.toString().startsWith("1.19") || isLegacy
+
+if (needsLegacySrc) {
     sourceSets.main.java.srcDir "src/1.16.5/java"
+}
+if (isLegacy) {
     sourceSets.main.java.exclude "**/config/gui/ui/**"
 }
 

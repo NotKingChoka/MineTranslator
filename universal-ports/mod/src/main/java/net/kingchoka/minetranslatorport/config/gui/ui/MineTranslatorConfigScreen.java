@@ -68,7 +68,17 @@ public final class MineTranslatorConfigScreen extends Screen {
         buildProviderSettings();
     }
 
-    @Override
+    public void render(com.mojang.blaze3d.vertex.PoseStack matrices, int mouseX, int mouseY, float delta) {
+        try {
+            java.lang.reflect.Constructor<?> ctor = Class.forName("net.minecraft.client.gui.GuiGraphics")
+                .getConstructor(com.mojang.blaze3d.vertex.PoseStack.class);
+            GuiGraphics graphics = (GuiGraphics) ctor.newInstance(matrices);
+            render(graphics, mouseX, mouseY, delta);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         if (layout == null) layout = UiLayout.calculate(width, height);
         graphics.fillGradient(0, 0, width, height, 0xE80B0D11, 0xF012151B);

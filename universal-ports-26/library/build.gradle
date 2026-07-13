@@ -1,7 +1,6 @@
 base { archivesName = "MineTranslator-Library-${minecraft_version}" }
 
 sourceSets.main.java.srcDir '../../universal-ports/library/src/main/java'
-sourceSets.main.resources.srcDir '../../universal-ports/library/src/main/resources'
 
 processResources {
     inputs.property 'version', mod_version

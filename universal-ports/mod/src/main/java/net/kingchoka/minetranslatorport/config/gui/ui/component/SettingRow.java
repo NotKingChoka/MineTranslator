@@ -44,7 +44,7 @@ public final class SettingRow {
         control.render(graphics, font, mouseX, mouseY, partialTick);
 
         if (hovered && (font.width(label) > labelWidth || (!compact && font.width(description) > labelWidth))) {
-            graphics.setTooltipForNextFrame(font, Component.empty().append(label).append("\n").append(description), mouseX, mouseY);
+            TooltipRenderer.show(graphics, font, Component.empty().append(label).append("\n").append(description), mouseX, mouseY);
         }
     }
 

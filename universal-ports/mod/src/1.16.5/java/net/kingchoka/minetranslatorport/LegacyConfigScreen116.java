@@ -1,15 +1,13 @@
 package net.kingchoka.minetranslatorport;
 
-import net.minecraft.class_2588;
-import net.minecraft.class_2585;
-import net.minecraft.class_2561;
-import net.minecraft.class_332;
-import net.minecraft.class_4185;
-import net.minecraft.class_437;
-import net.minecraft.class_4587;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiComponent;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 
-/** Dark MineTranslator settings screen implemented against the stable 1.16.5 intermediary API. */
-public final class LegacyConfigScreen116 extends class_437 {
+public final class LegacyConfigScreen116 extends Screen {
     private static final int BACKGROUND = 0xF00F1115;
     private static final int PANEL = 0xF2171A20;
     private static final int CARD = 0xF21D2129;
@@ -19,7 +17,7 @@ public final class LegacyConfigScreen116 extends class_437 {
     private static final int MUTED = 0xFFA7AFBD;
     private static final int SECONDARY = 0xFF36CFE5;
 
-    private final class_437 parent;
+    private final Screen parent;
     private final PortController controller = PortController.get();
     private int selected;
     private int panelX;
@@ -28,21 +26,21 @@ public final class LegacyConfigScreen116 extends class_437 {
     private int panelHeight;
     private int sidebarWidth;
     private int controlWidth;
-    private class_4185 languageButton;
-    private class_4185 autoPlayersButton;
-    private class_4185 controlsButton;
+    private Button languageButton;
+    private Button autoPlayersButton;
+    private Button controlsButton;
 
-    public LegacyConfigScreen116(class_437 parent) {
-        super(new class_2585("MineTranslator"));
+    public LegacyConfigScreen116(Screen parent) {
+        super(literal("MineTranslator"));
         this.parent = parent;
     }
 
     @Override
-    protected void method_25426() {
-        panelWidth = Math.min(720, Math.max(300, this.field_22789 - 16));
-        panelHeight = Math.min(410, Math.max(210, this.field_22790 - 12));
-        panelX = (this.field_22789 - panelWidth) / 2;
-        panelY = (this.field_22790 - panelHeight) / 2;
+    protected void init() {
+        panelWidth = Math.min(720, Math.max(300, this.width - 16));
+        panelHeight = Math.min(410, Math.max(210, this.height - 12));
+        panelX = (this.width - panelWidth) / 2;
+        panelY = (this.height - panelHeight) / 2;
         sidebarWidth = panelWidth < 520 ? 112 : 165;
         controlWidth = panelWidth < 520 ? 112 : 170;
 
@@ -56,7 +54,7 @@ public final class LegacyConfigScreen116 extends class_437 {
         };
         for (int i = 0; i < categories.length; i++) {
             final int category = i;
-            this.method_25411(new class_4185(
+            this.addRenderableWidget(new Button(
                 panelX + 8, panelY + 49 + i * 23, sidebarWidth - 16, 19,
                 tr(categories[i]),
                 button -> {
@@ -66,73 +64,73 @@ public final class LegacyConfigScreen116 extends class_437 {
             ));
         }
 
-        languageButton = this.method_25411(new class_4185(
+        languageButton = this.addRenderableWidget(new Button(
             panelX + panelWidth - controlWidth - 12, panelY + 105, controlWidth, 22,
             languageLabel(),
             button -> {
                 controller.cycleTargetLanguage();
-                button.method_25355(languageLabel());
+                button.setMessage(languageLabel());
             }
         ));
-        autoPlayersButton = this.method_25411(new class_4185(
+        autoPlayersButton = this.addRenderableWidget(new Button(
             panelX + panelWidth - controlWidth - 12, panelY + 151, controlWidth, 22,
             autoPlayersLabel(),
             button -> {
                 controller.toggleAutoTranslatePlayerMessages();
-                button.method_25355(autoPlayersLabel());
+                button.setMessage(autoPlayersLabel());
             }
         ));
-        controlsButton = this.method_25411(new class_4185(
+        controlsButton = this.addRenderableWidget(new Button(
             panelX + panelWidth - controlWidth - 12, panelY + 105, controlWidth, 22,
             tr("MineTranslator.config.controls"),
-            button -> ReflectionAccess.openControls(this.field_22787)
+            button -> ReflectionAccess.openControls(this.minecraft)
         ));
 
-        this.method_25411(new class_4185(
+        this.addRenderableWidget(new Button(
             panelX + panelWidth - 224, panelY + panelHeight - 34, 100, 22,
             tr("MineTranslator.config.cancel"),
-            button -> this.field_22787.method_1507(parent)
+            button -> this.minecraft.setScreen(parent)
         ));
-        this.method_25411(new class_4185(
+        this.addRenderableWidget(new Button(
             panelX + panelWidth - 116, panelY + panelHeight - 34, 104, 22,
             tr("MineTranslator.config.save"),
             button -> {
                 controller.saveConfig();
-                this.field_22787.method_1507(parent);
+                this.minecraft.setScreen(parent);
             }
         ));
         updateVisibility();
     }
 
     private void updateVisibility() {
-        languageButton.field_22764 = selected == 0 || selected == 1;
-        autoPlayersButton.field_22764 = selected == 0 || selected == 2;
-        controlsButton.field_22764 = selected == 4;
+        languageButton.visible = selected == 0 || selected == 1;
+        autoPlayersButton.visible = selected == 0 || selected == 2;
+        controlsButton.visible = selected == 4;
     }
 
-    private class_2561 languageLabel() {
+    private Component languageLabel() {
         return tr("MineTranslator.config.target_language", controller.targetLanguage().toUpperCase());
     }
 
-    private class_2561 autoPlayersLabel() {
+    private Component autoPlayersLabel() {
         return tr(controller.autoTranslatePlayerMessages()
             ? "MineTranslator.config.enabled" : "MineTranslator.config.disabled");
     }
 
     @Override
-    public void method_25394(class_4587 matrices, int mouseX, int mouseY, float delta) {
-        class_332.method_25294(matrices, 0, 0, this.field_22789, this.field_22790, BACKGROUND);
-        class_332.method_25294(matrices, panelX, panelY, panelX + panelWidth, panelY + panelHeight, PANEL);
-        class_332.method_25294(matrices, panelX, panelY, panelX + panelWidth, panelY + 43, CARD);
-        class_332.method_25294(matrices, panelX, panelY + 42, panelX + panelWidth, panelY + 43, BORDER);
-        class_332.method_25294(matrices, panelX + sidebarWidth - 1, panelY + 43, panelX + sidebarWidth, panelY + panelHeight - 44, BORDER);
-        class_332.method_25294(matrices, panelX + sidebarWidth, panelY + panelHeight - 44,
+    public void render(PoseStack matrices, int mouseX, int mouseY, float delta) {
+        fill(matrices, 0, 0, this.width, this.height, BACKGROUND);
+        fill(matrices, panelX, panelY, panelX + panelWidth, panelY + panelHeight, PANEL);
+        fill(matrices, panelX, panelY, panelX + panelWidth, panelY + 43, CARD);
+        fill(matrices, panelX, panelY + 42, panelX + panelWidth, panelY + 43, BORDER);
+        fill(matrices, panelX + sidebarWidth - 1, panelY + 43, panelX + sidebarWidth, panelY + panelHeight - 44, BORDER);
+        fill(matrices, panelX + sidebarWidth, panelY + panelHeight - 44,
             panelX + panelWidth, panelY + panelHeight - 43, BORDER);
-        class_332.method_25294(matrices, panelX + 12, panelY + 11, panelX + 34, panelY + 33, ACCENT);
+        fill(matrices, panelX + 12, panelY + 11, panelX + 34, panelY + 33, ACCENT);
 
         drawLeft(matrices, "M", panelX + 19, panelY + 18, 0xFF171A20, 10);
         drawLeft(matrices, "MineTranslator", panelX + 43, panelY + 11, TEXT, panelWidth - 55);
-        drawLeft(matrices, "v3.0.0-alpha.1 • Fabric 1.16.5", panelX + 43, panelY + 24, MUTED, panelWidth - 55);
+        drawLeft(matrices, "v3.0.0-alpha.1 • Fabric Legacy", panelX + 43, panelY + 24, MUTED, panelWidth - 55);
         drawLeft(matrices, titleForSelected(), panelX + sidebarWidth + 12, panelY + 57, TEXT,
             panelWidth - sidebarWidth - 24);
         if (panelWidth >= 430) {
@@ -154,37 +152,37 @@ public final class LegacyConfigScreen116 extends class_437 {
             drawInfo(matrices, panelY + 94, "MineTranslator.config.debug_info", SECONDARY);
         }
 
-        super.method_25394(matrices, mouseX, mouseY, delta);
+        super.render(matrices, mouseX, mouseY, delta);
     }
 
-    private void drawCard(class_4587 matrices, int y, String title, String description) {
+    private void drawCard(PoseStack matrices, int y, String title, String description) {
         int x = panelX + sidebarWidth + 6;
         int right = panelX + panelWidth - 12;
-        class_332.method_25294(matrices, x, y, right, y + 40, CARD);
-        class_332.method_25294(matrices, x, y, x + 2, y + 40, ACCENT);
+        fill(matrices, x, y, right, y + 40, CARD);
+        fill(matrices, x, y, x + 2, y + 40, ACCENT);
         int textWidth = Math.max(48, panelX + panelWidth - controlWidth - 24 - (x + 10));
         drawLeft(matrices, tr(title).getString(), x + 10, y + 8, TEXT, textWidth);
         drawLeft(matrices, tr(description).getString(), x + 10, y + 23, MUTED, textWidth);
     }
 
-    private void drawInfo(class_4587 matrices, int y, String key, int color) {
+    private void drawInfo(PoseStack matrices, int y, String key, int color) {
         int x = panelX + sidebarWidth + 6;
-        class_332.method_25294(matrices, x, y, panelX + panelWidth - 12, y + 50, CARD);
+        fill(matrices, x, y, panelX + panelWidth - 12, y + 50, CARD);
         drawLeft(matrices, tr(key).getString(), x + 12, y + 18, color,
             panelX + panelWidth - x - 24);
     }
 
-    private void drawLeft(class_4587 matrices, String text, int x, int y, int color, int maxWidth) {
-        class_332.method_25303(matrices, this.field_22793, ellipsize(text, maxWidth), x, y, color);
+    private void drawLeft(PoseStack matrices, String text, int x, int y, int color, int maxWidth) {
+        drawString(matrices, this.font, ellipsize(text, maxWidth), x, y, color);
     }
 
     private String ellipsize(String text, int maxWidth) {
         if (text == null) return "";
-        if (maxWidth <= 0 || this.field_22793.method_1727(text) <= maxWidth) return text;
+        if (maxWidth <= 0 || this.font.width(text) <= maxWidth) return text;
         String suffix = "...";
-        int suffixWidth = this.field_22793.method_1727(suffix);
+        int suffixWidth = this.font.width(suffix);
         int end = text.length();
-        while (end > 0 && this.field_22793.method_1727(text.substring(0, end)) + suffixWidth > maxWidth) end--;
+        while (end > 0 && this.font.width(text.substring(0, end)) + suffixWidth > maxWidth) end--;
         return end == 0 ? suffix : text.substring(0, end) + suffix;
     }
 
@@ -201,48 +199,52 @@ public final class LegacyConfigScreen116 extends class_437 {
         return tr("MineTranslator.config.section_desc").getString();
     }
 
-    private class_2561 tr(String key, Object... args) {
-        class_2588 translated = new class_2588(key, args);
-        String resolved = translated.getString();
-        if (!resolved.equals(key)) return translated;
-        String fallback = fallback(key);
-        if (args.length > 0) {
-            try { fallback = String.format(fallback, args); } catch (Exception ignored) {}
-        }
-        return new class_2585(fallback);
+    private Component tr(String key, Object... args) {
+        return translatable(key, args);
     }
 
-    private String fallback(String key) {
-        if ("MineTranslator.category.general".equals(key)) return "Общие";
-        if ("MineTranslator.category.providers".equals(key)) return "Переводчики";
-        if ("MineTranslator.category.chat".equals(key)) return "Чат";
-        if ("MineTranslator.category.items".equals(key)) return "Предметы";
-        if ("MineTranslator.category.keys".equals(key)) return "Клавиши";
-        if ("MineTranslator.category.debug".equals(key)) return "Отладка";
-        if ("MineTranslator.config.section_desc".equals(key)) return "Настройки MineTranslator для Minecraft 1.16.5";
-        if ("MineTranslator.config.language_title".equals(key)) return "Целевой язык";
-        if ("MineTranslator.config.language_desc".equals(key)) return "Язык перевода чата, предметов и ввода";
-        if ("MineTranslator.config.target_language".equals(key)) return "Язык: %s";
-        if ("MineTranslator.config.players_title".equals(key)) return "Сообщения игроков";
-        if ("MineTranslator.config.players_desc".equals(key)) return "Автоперевод сообщений с ником в [скобках]";
-        if ("MineTranslator.config.enabled".equals(key)) return "Включено";
-        if ("MineTranslator.config.disabled".equals(key)) return "Выключено";
-        if ("MineTranslator.config.items_info".equals(key)) return "Наведи на предмет и нажми Ё: перевод / оригинал";
-        if ("MineTranslator.config.keys_title".equals(key)) return "Клавиши MineTranslator";
-        if ("MineTranslator.config.keys_desc".equals(key)) return "Переназначение обеих клавиш в стандартном меню";
-        if ("MineTranslator.config.controls".equals(key)) return "Открыть управление";
-        if ("MineTranslator.config.debug_info".equals(key)) return "Безопасные логи включены; содержимое tooltip не записывается";
-        if ("MineTranslator.config.cancel".equals(key)) return "Отмена";
-        if ("MineTranslator.config.save".equals(key)) return "Сохранить";
-        return key;
+    private static Component literal(String text) {
+        try {
+            return (Component) Component.class.getMethod("literal", String.class).invoke(null, text);
+        } catch (Exception e) {
+            try {
+                Class<?> textCompClass = Class.forName("net.minecraft.network.chat.TextComponent");
+                return (Component) textCompClass.getConstructor(String.class).newInstance(text);
+            } catch (Exception ex) {
+                try {
+                    Class<?> literalClass = Class.forName("net.minecraft.class_2585");
+                    return (Component) literalClass.getConstructor(String.class).newInstance(text);
+                } catch (Exception ex2) {
+                    throw new RuntimeException(ex2);
+                }
+            }
+        }
+    }
+
+    private static Component translatable(String key, Object... args) {
+        try {
+            return (Component) Component.class.getMethod("translatable", String.class, Object[].class).invoke(null, key, args);
+        } catch (Exception e) {
+            try {
+                Class<?> transCompClass = Class.forName("net.minecraft.network.chat.TranslatableComponent");
+                return (Component) transCompClass.getConstructor(String.class, Object[].class).newInstance(key, args);
+            } catch (Exception ex) {
+                try {
+                    Class<?> transClass = Class.forName("net.minecraft.class_2588");
+                    return (Component) transClass.getConstructor(String.class, Object[].class).newInstance(key, args);
+                } catch (Exception ex2) {
+                    throw new RuntimeException(ex2);
+                }
+            }
+        }
     }
 
     @Override
-    public boolean method_25404(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == 256) {
-            this.field_22787.method_1507(parent);
+            this.minecraft.setScreen(parent);
             return true;
         }
-        return super.method_25404(keyCode, scanCode, modifiers);
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 }

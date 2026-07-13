@@ -2,8 +2,14 @@ base {
     archivesName = "MineTranslator-${minecraft_version}"
 }
 
-if (minecraft_version.toString() == '1.16.5') {
-    sourceSets.main.java.srcDir 'src/1.16.5/java'
+def isLegacy = minecraft_version.toString().startsWith("1.19") ||
+               minecraft_version.toString().startsWith("1.18") ||
+               minecraft_version.toString().startsWith("1.17") ||
+               minecraft_version.toString() == "1.16.5"
+
+if (isLegacy) {
+    sourceSets.main.java.srcDir "src/1.16.5/java"
+    sourceSets.main.java.exclude "**/config/gui/ui/**"
 }
 
 dependencies {

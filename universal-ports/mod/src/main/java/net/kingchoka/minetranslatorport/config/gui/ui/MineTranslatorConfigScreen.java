@@ -300,13 +300,20 @@ public final class MineTranslatorConfigScreen extends Screen {
         return super.mouseReleased(mouseX, mouseY, button);
     }
 
-    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
+        if (scroll.scroll(mouseX, mouseY, amount)) {
+            scrollPositions.put(selected, scroll.scrollValue());
+            return true;
+        }
+        return false;
+    }
+
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
         if (scroll.scroll(mouseX, mouseY, vertical)) {
             scrollPositions.put(selected, scroll.scrollValue());
             return true;
         }
-        return super.mouseScrolled(mouseX, mouseY, horizontal, vertical);
+        return false;
     }
 
     @Override

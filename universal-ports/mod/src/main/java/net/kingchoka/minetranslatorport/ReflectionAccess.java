@@ -448,7 +448,12 @@ public final class ReflectionAccess {
         } catch (ClassNotFoundException e) {
             try {
                 Class<?> screenType = Class.forName("net.minecraft.class_437");
-                Class<?> configType = Class.forName("net.kingchoka.minetranslatorport.LegacyConfigScreen116");
+                Class<?> configType;
+                try {
+                    configType = Class.forName("net.kingchoka.minetranslatorport.LegacyConfigScreen26");
+                } catch (ClassNotFoundException ex) {
+                    configType = Class.forName("net.kingchoka.minetranslatorport.LegacyConfigScreen116");
+                }
                 Constructor<?> constructor = configType.getDeclaredConstructor(screenType);
                 constructor.setAccessible(true);
                 Object screen = constructor.newInstance(parent);

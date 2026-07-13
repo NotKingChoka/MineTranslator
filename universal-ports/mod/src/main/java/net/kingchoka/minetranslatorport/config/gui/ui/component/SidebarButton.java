@@ -34,7 +34,7 @@ public final class SidebarButton {
         graphics.drawString(font, icon, x + 8, y + (height - font.lineHeight) / 2, selected ? UiTheme.PRIMARY : UiTheme.MUTED, false);
         UiTheme.drawEllipsizedText(graphics, font, label, x + 24, y + (height - font.lineHeight) / 2,
             width - 30, selected ? UiTheme.TEXT : UiTheme.MUTED);
-        if (hovered && font.width(label) > width - 30) graphics.setTooltipForNextFrame(font, label, mouseX, mouseY);
+        if (hovered && font.width(label) > width - 30) TooltipRenderer.show(graphics, font, label, mouseX, mouseY);
     }
 
     public boolean contains(double mouseX, double mouseY) {

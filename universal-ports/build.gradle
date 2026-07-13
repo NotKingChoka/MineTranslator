@@ -22,14 +22,21 @@ subprojects {
         modImplementation "net.fabricmc:fabric-loader:${loader_version}"
     }
 
+    def javaVersion = 21
+    if (minecraft_version.startsWith("1.20") || minecraft_version.startsWith("1.19") || minecraft_version.startsWith("1.18")) {
+        javaVersion = 17
+    } else if (minecraft_version.startsWith("1.17")) {
+        javaVersion = 16
+    }
+
     java {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
+        sourceCompatibility = JavaVersion.toVersion(javaVersion)
+        targetCompatibility = JavaVersion.toVersion(javaVersion)
         withSourcesJar()
     }
 
     tasks.withType(JavaCompile).configureEach {
-        options.release = 21
+        options.release = javaVersion
         options.encoding = 'UTF-8'
     }
 }

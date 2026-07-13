@@ -1,6 +1,7 @@
 base { archivesName = "MineTranslator-${minecraft_version}" }
 
 sourceSets.main.java.srcDir '../../universal-ports/mod/src/main/java'
+sourceSets.main.java.exclude '**/config/gui/ui/**'
 sourceSets.main.resources.srcDir '../../universal-ports/mod/src/main/resources'
 
 dependencies {

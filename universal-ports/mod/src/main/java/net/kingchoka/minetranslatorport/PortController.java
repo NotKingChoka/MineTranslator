@@ -178,7 +178,7 @@ public final class PortController {
             record.active = true;
             Object translatedComponent = ReflectionAccess.styledLiteral(record.translated, message);
             if (translatedComponent != null) {
-                renderTasks.add(() -> ReflectionAccess.replaceMessageInChat(chatHud, message, translatedComponent));
+                renderTasks.add(() -> ReflectionAccess.replaceMessageInChat(chatHud, source, translatedComponent));
             }
         });
         return false;
@@ -271,7 +271,8 @@ public final class PortController {
             Object targetComponent = record.active 
                 ? ReflectionAccess.styledLiteral(record.translated, record.originalComponent)
                 : record.originalComponent;
-            ReflectionAccess.replaceMessageInChat(record.chatHud, record.originalComponent, targetComponent);
+            String searchText = record.active ? record.originalText : record.translated;
+            ReflectionAccess.replaceMessageInChat(record.chatHud, searchText, targetComponent);
             return;
         }
         ParseResult parse = parsePlayerMessage(record.originalText);
@@ -286,7 +287,7 @@ public final class PortController {
             record.active = true;
             Object targetComponent = ReflectionAccess.styledLiteral(record.translated, record.originalComponent);
             if (targetComponent != null) {
-                renderTasks.add(() -> ReflectionAccess.replaceMessageInChat(record.chatHud, record.originalComponent, targetComponent));
+                renderTasks.add(() -> ReflectionAccess.replaceMessageInChat(record.chatHud, record.originalText, targetComponent));
             }
         });
     }

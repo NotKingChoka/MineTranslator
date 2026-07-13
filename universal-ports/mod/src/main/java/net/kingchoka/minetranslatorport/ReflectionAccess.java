@@ -612,8 +612,8 @@ public final class ReflectionAccess {
     }
 
     @SuppressWarnings("unchecked")
-    static void replaceMessageInChat(Object chatHud, Object originalComponent, Object translatedComponent) {
-        if (chatHud == null || originalComponent == null || translatedComponent == null) return;
+    static void replaceMessageInChat(Object chatHud, String originalText, Object translatedComponent) {
+        if (chatHud == null || originalText == null || translatedComponent == null) return;
         try {
             Field messagesField = null;
             for (Field field : chatHud.getClass().getDeclaredFields()) {
@@ -649,7 +649,7 @@ public final class ReflectionAccess {
             if (messages == null) return;
 
             boolean found = false;
-            for (int i = 0; i < messages.size(); i++) {
+            for (int i = messages.size() - 1; i >= 0; i--) {
                 Object entry = messages.get(i);
                 if (entry == null) continue;
                 
@@ -660,7 +660,8 @@ public final class ReflectionAccess {
                         || hasClassInHierarchy(f.getType(), "net.minecraft.network.chat.Component")) {
                         f.setAccessible(true);
                         Object val = f.get(entry);
-                        if (val == originalComponent) {
+                        String valText = text(val);
+                        if (valText != null && valText.equals(originalText)) {
                             compField = f;
                             entryComp = val;
                             break;
@@ -696,6 +697,7 @@ public final class ReflectionAccess {
                     } else {
                         compField.set(entry, translatedComponent);
                     }
+                    break;
                 }
             }
 

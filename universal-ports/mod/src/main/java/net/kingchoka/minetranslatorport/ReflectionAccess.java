@@ -648,6 +648,7 @@ public final class ReflectionAccess {
             List<Object> messages = (List<Object>) messagesField.get(chatHud);
             if (messages == null) return;
 
+            System.out.println("[MineTranslator Debug] replaceMessageInChat called. Original text: \"" + originalText + "\", list size: " + messages.size());
             boolean found = false;
             for (int i = messages.size() - 1; i >= 0; i--) {
                 Object entry = messages.get(i);
@@ -661,6 +662,7 @@ public final class ReflectionAccess {
                         f.setAccessible(true);
                         Object val = f.get(entry);
                         String valText = text(val);
+                        System.out.println("[MineTranslator Debug] Entry " + i + " field " + f.getName() + " text: \"" + valText + "\"");
                         if (valText != null && valText.equals(originalText)) {
                             compField = f;
                             entryComp = val;
@@ -670,6 +672,7 @@ public final class ReflectionAccess {
                 }
                 
                 if (compField != null) {
+                    System.out.println("[MineTranslator Debug] Found matching message at index " + i + ". Class: " + entry.getClass().getName());
                     found = true;
                     if (entry.getClass().isRecord() || Modifier.isFinal(compField.getModifiers())) {
                         Constructor<?>[] constructors = entry.getClass().getDeclaredConstructors();
@@ -693,12 +696,17 @@ public final class ReflectionAccess {
                             }
                             Object newEntry = best.newInstance(args);
                             messages.set(i, newEntry);
+                            System.out.println("[MineTranslator Debug] Replaced entry with recreated Record!");
                         }
                     } else {
                         compField.set(entry, translatedComponent);
+                        System.out.println("[MineTranslator Debug] Replaced field value in place!");
                     }
                     break;
                 }
+            }
+            if (!found) {
+                System.out.println("[MineTranslator Debug] Match NOT found in messages list!");
             }
 
             if (found) {

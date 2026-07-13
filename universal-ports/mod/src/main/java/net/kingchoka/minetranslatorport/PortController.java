@@ -147,8 +147,12 @@ public final class PortController {
     }
 
     boolean onChat(Object chatHud, Object message) {
-        if (message == null) return false;
+        if (message == null) {
+            System.out.println("[MineTranslator Debug] onChat called with null message");
+            return false;
+        }
         String source = ReflectionAccess.text(message);
+        System.out.println("[MineTranslator Debug] onChat text: " + source);
         if (source == null || source.trim().isEmpty()) return false;
 
         final ChatRecord record = new ChatRecord(chatHud, message, source);
@@ -165,11 +169,15 @@ public final class PortController {
             || (isPlayer && ModConfig.getInstance().autoTranslatePlayerMessages)
             || (isNPC && ModConfig.getInstance().translateOnlyNPC);
 
+        System.out.println("[MineTranslator Debug] isPlayer: " + isPlayer + ", isNPC: " + isNPC + ", shouldTranslate: " + shouldTranslate);
+
         if (!shouldTranslate) return false;
 
         String textToTranslate = isPlayer ? parse.body : source;
+        System.out.println("[MineTranslator Debug] Translating: " + textToTranslate);
 
         GoogleTranslator.translate(textToTranslate, "auto", targetLanguage()).thenAccept(translated -> {
+            System.out.println("[MineTranslator Debug] Translated result: " + translated);
             if (isPlayer) {
                 record.translated = parse.prefix + translated;
             } else {
@@ -178,7 +186,10 @@ public final class PortController {
             record.active = true;
             Object translatedComponent = ReflectionAccess.styledLiteral(record.translated, message);
             if (translatedComponent != null) {
+                System.out.println("[MineTranslator Debug] StyledLiteral created, queueing replacement");
                 renderTasks.add(() -> ReflectionAccess.replaceMessageInChat(chatHud, source, translatedComponent));
+            } else {
+                System.out.println("[MineTranslator Debug] StyledLiteral was null!");
             }
         });
         return false;

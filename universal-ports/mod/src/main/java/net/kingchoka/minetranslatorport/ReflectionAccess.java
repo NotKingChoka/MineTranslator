@@ -615,101 +615,74 @@ public final class ReflectionAccess {
     static void replaceMessageInChat(Object chatHud, String originalText, Object translatedComponent) {
         if (chatHud == null || originalText == null || translatedComponent == null) return;
         try {
-            Field messagesField = null;
+            boolean found = false;
             for (Field field : chatHud.getClass().getDeclaredFields()) {
                 if (field.getType() == List.class) {
-                    String name = field.getName();
-                    if (name.equals("field_1864") || name.equals("allMessages") || name.equals("messages")) {
-                        messagesField = field;
-                        break;
-                    }
-                }
-            }
-            if (messagesField == null) {
-                for (Field field : chatHud.getClass().getDeclaredFields()) {
-                    if (field.getType() == List.class) {
-                        field.setAccessible(true);
-                        List<?> list = (List<?>) field.get(chatHud);
-                        if (list != null && !list.isEmpty()) {
-                            Object first = list.get(0);
-                            if (first != null && (first.getClass().getName().contains("GuiMessage") 
-                                || first.getClass().getName().contains("ChatHudLine")
-                                || first.getClass().getName().contains("class_303")
-                                || first.getClass().getName().contains("class_7596"))) {
-                                messagesField = field;
-                                break;
+                    field.setAccessible(true);
+                    List<Object> messages = (List<Object>) field.get(chatHud);
+                    if (messages == null || messages.isEmpty()) continue;
+                    
+                    System.out.println("[MineTranslator Debug] replaceMessageInChat scanning list: \"" + field.getName() + "\", size: " + messages.size());
+                    for (int i = messages.size() - 1; i >= 0; i--) {
+                        Object entry = messages.get(i);
+                        if (entry == null) continue;
+                        
+                        Object entryComp = null;
+                        Field compField = null;
+                        for (Field f : entry.getClass().getDeclaredFields()) {
+                            if (hasClassInHierarchy(f.getType(), "net.minecraft.class_2561")
+                                || hasClassInHierarchy(f.getType(), "net.minecraft.network.chat.Component")) {
+                                f.setAccessible(true);
+                                Object val = f.get(entry);
+                                String valText = text(val);
+                                System.out.println("[MineTranslator Debug] List \"" + field.getName() + "\" entry " + i + " field " + f.getName() + " text: \"" + valText + "\"");
+                                if (valText != null && valText.equals(originalText)) {
+                                    compField = f;
+                                    entryComp = val;
+                                    break;
+                                }
                             }
                         }
-                    }
-                }
-            }
-            if (messagesField == null) return;
-            messagesField.setAccessible(true);
-            List<Object> messages = (List<Object>) messagesField.get(chatHud);
-            if (messages == null) return;
-
-            System.out.println("[MineTranslator Debug] replaceMessageInChat called. Original text: \"" + originalText + "\", list size: " + messages.size());
-            boolean found = false;
-            for (int i = messages.size() - 1; i >= 0; i--) {
-                Object entry = messages.get(i);
-                if (entry == null) continue;
-                
-                Object entryComp = null;
-                Field compField = null;
-                for (Field f : entry.getClass().getDeclaredFields()) {
-                    if (hasClassInHierarchy(f.getType(), "net.minecraft.class_2561")
-                        || hasClassInHierarchy(f.getType(), "net.minecraft.network.chat.Component")) {
-                        f.setAccessible(true);
-                        Object val = f.get(entry);
-                        String valText = text(val);
-                        System.out.println("[MineTranslator Debug] Entry " + i + " field " + f.getName() + " text: \"" + valText + "\"");
-                        if (valText != null && valText.equals(originalText)) {
-                            compField = f;
-                            entryComp = val;
+                        
+                        if (compField != null) {
+                            System.out.println("[MineTranslator Debug] Found matching message in list \"" + field.getName() + "\" at index " + i + ". Class: " + entry.getClass().getName());
+                            found = true;
+                            if (entry.getClass().isRecord() || Modifier.isFinal(compField.getModifiers())) {
+                                Constructor<?>[] constructors = entry.getClass().getDeclaredConstructors();
+                                Constructor<?> best = null;
+                                for (Constructor<?> c : constructors) {
+                                    if (best == null || c.getParameterTypes().length > best.getParameterTypes().length) {
+                                        best = c;
+                                    }
+                                }
+                                if (best != null) {
+                                    best.setAccessible(true);
+                                    Object[] args = new Object[best.getParameterTypes().length];
+                                    Field[] fields = entry.getClass().getDeclaredFields();
+                                    for (int j = 0; j < args.length; j++) {
+                                        fields[j].setAccessible(true);
+                                        if (fields[j] == compField) {
+                                            args[j] = translatedComponent;
+                                        } else {
+                                            args[j] = fields[j].get(entry);
+                                        }
+                                    }
+                                    Object newEntry = best.newInstance(args);
+                                    messages.set(i, newEntry);
+                                    System.out.println("[MineTranslator Debug] Replaced entry with recreated Record!");
+                                }
+                            } else {
+                                compField.set(entry, translatedComponent);
+                                System.out.println("[MineTranslator Debug] Replaced field value in place!");
+                            }
                             break;
                         }
                     }
                 }
-                
-                if (compField != null) {
-                    System.out.println("[MineTranslator Debug] Found matching message at index " + i + ". Class: " + entry.getClass().getName());
-                    found = true;
-                    if (entry.getClass().isRecord() || Modifier.isFinal(compField.getModifiers())) {
-                        Constructor<?>[] constructors = entry.getClass().getDeclaredConstructors();
-                        Constructor<?> best = null;
-                        for (Constructor<?> c : constructors) {
-                            if (best == null || c.getParameterTypes().length > best.getParameterTypes().length) {
-                                best = c;
-                            }
-                        }
-                        if (best != null) {
-                            best.setAccessible(true);
-                            Object[] args = new Object[best.getParameterTypes().length];
-                            Field[] fields = entry.getClass().getDeclaredFields();
-                            for (int j = 0; j < args.length; j++) {
-                                fields[j].setAccessible(true);
-                                if (fields[j] == compField) {
-                                    args[j] = translatedComponent;
-                                } else {
-                                    args[j] = fields[j].get(entry);
-                                }
-                            }
-                            Object newEntry = best.newInstance(args);
-                            messages.set(i, newEntry);
-                            System.out.println("[MineTranslator Debug] Replaced entry with recreated Record!");
-                        }
-                    } else {
-                        compField.set(entry, translatedComponent);
-                        System.out.println("[MineTranslator Debug] Replaced field value in place!");
-                    }
-                    break;
-                }
-            }
-            if (!found) {
-                System.out.println("[MineTranslator Debug] Match NOT found in messages list!");
             }
 
             if (found) {
+                System.out.println("[MineTranslator Debug] Refreshing chat lines...");
                 try {
                     invokeStrict(chatHud, "method_44811");
                 } catch (NoSuchMethodException e) {
@@ -721,6 +694,8 @@ public final class ReflectionAccess {
                         } catch (Exception ignored) {}
                     }
                 }
+            } else {
+                System.out.println("[MineTranslator Debug] Match NOT found in any List field!");
             }
         } catch (Exception e) {
             e.printStackTrace();

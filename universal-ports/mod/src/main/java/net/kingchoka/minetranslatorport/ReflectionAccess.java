@@ -627,13 +627,23 @@ public final class ReflectionAccess {
                         Object entry = messages.get(i);
                         if (entry == null) continue;
                         
+                        System.out.println("[MineTranslator Debug] List \"" + field.getName() + "\" entry " + i + " class: " + entry.getClass().getName());
+                        for (Field f : entry.getClass().getDeclaredFields()) {
+                            try {
+                                f.setAccessible(true);
+                                Object val = f.get(entry);
+                                System.out.println("[MineTranslator Debug]   Field: name=" + f.getName() + ", type=" + f.getType().getName() + ", valueClass=" + (val == null ? "null" : val.getClass().getName()));
+                            } catch (Exception ignored) {}
+                        }
+
                         Object entryComp = null;
                         Field compField = null;
                         for (Field f : entry.getClass().getDeclaredFields()) {
                             if (hasClassInHierarchy(f.getType(), "net.minecraft.class_2561")
                                 || hasClassInHierarchy(f.getType(), "net.minecraft.network.chat.Component")) {
                                 f.setAccessible(true);
-                                Object val = f.get(entry);
+                                Object val = null;
+                                try { val = f.get(entry); } catch (Exception ignored) {}
                                 String valText = text(val);
                                 System.out.println("[MineTranslator Debug] List \"" + field.getName() + "\" entry " + i + " field " + f.getName() + " text: \"" + valText + "\"");
                                 if (valText != null && valText.equals(originalText)) {

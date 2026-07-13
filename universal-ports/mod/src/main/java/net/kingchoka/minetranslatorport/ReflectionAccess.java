@@ -442,8 +442,11 @@ public final class ReflectionAccess {
             if (constructor == null) throw new NoSuchMethodException("MineTranslatorConfigScreen(Screen)");
             constructor.setAccessible(true);
             Object screen = constructor.newInstance(parent);
-            Object result = invokeStrict(client, "method_1507", screen);
-            if (result == null) invokeStrict(client, "setScreen", screen);
+            try {
+                invokeStrict(client, "method_1507", screen);
+            } catch (NoSuchMethodException ignoredEx) {
+                invokeStrict(client, "setScreen", screen);
+            }
             return;
         } catch (ClassNotFoundException e) {
             try {
@@ -463,8 +466,11 @@ public final class ReflectionAccess {
                 if (constructor == null) throw new NoSuchMethodException("LegacyConfigScreen(Screen)");
                 constructor.setAccessible(true);
                 Object screen = constructor.newInstance(parent);
-                Object result = invokeStrict(client, "method_1507", screen);
-                if (result == null) invokeStrict(client, "setScreen", screen);
+                try {
+                    invokeStrict(client, "method_1507", screen);
+                } catch (NoSuchMethodException ignoredEx) {
+                    invokeStrict(client, "setScreen", screen);
+                }
                 return;
             } catch (Exception ignored) {}
         } catch (Exception exception) {

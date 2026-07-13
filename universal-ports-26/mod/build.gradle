@@ -5,8 +5,8 @@ sourceSets.main.java.exclude '**/config/gui/ui/**'
 sourceSets.main.resources.srcDir '../../universal-ports/mod/src/main/resources'
 
 dependencies {
-    compileOnly project(':library')
-    runtimeOnly project(':library')
+    implementation project(':library')
+    include project(':library')
     compileOnly 'com.google.code.gson:gson:2.8.0'
 }
 

@@ -13,8 +13,8 @@ if (isLegacy) {
 }
 
 dependencies {
-    compileOnly project(path: ':library', configuration: 'namedElements')
-    runtimeOnly project(path: ':library', configuration: 'namedElements')
+    implementation project(path: ':library', configuration: 'namedElements')
+    include project(path: ':library', configuration: 'namedElements')
     compileOnly 'com.google.code.gson:gson:2.8.0'
 }
 

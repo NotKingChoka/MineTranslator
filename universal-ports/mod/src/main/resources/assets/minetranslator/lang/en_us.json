@@ -249,5 +249,8 @@
   "MineTranslator.button.copy_diagnostics": "Copy diagnostic report",
   "MineTranslator.ui.desc.copy_diagnostics": "Copies a report without the API key.",
   "MineTranslator.dialog.cache.title": "Clear translation cache?",
-  "MineTranslator.dialog.cache.description": "Cached translations will be removed. This cannot be undone."
+  "MineTranslator.dialog.cache.description": "Cached translations will be removed. This cannot be undone.",
+  "MineTranslator.config.keys_title": "MineTranslator Keys",
+  "MineTranslator.config.keys_desc": "Open controls screen to rebind key mappings.",
+  "MineTranslator.config.controls": "Open Controls"
 }

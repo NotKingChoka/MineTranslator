@@ -147,7 +147,7 @@ public final class PortController {
     }
 
     boolean onChat(Object chatHud, Object message) {
-        if (suppressChat || message == null) return false;
+        if (message == null) return false;
         String source = ReflectionAccess.text(message);
         if (source == null || source.trim().isEmpty()) return false;
 
@@ -176,9 +176,12 @@ public final class PortController {
                 record.translated = translated;
             }
             record.active = true;
-            renderTasks.add(() -> rebuildChat(chatHud));
+            Object translatedComponent = ReflectionAccess.styledLiteral(record.translated, message);
+            if (translatedComponent != null) {
+                renderTasks.add(() -> ReflectionAccess.replaceMessageInChat(chatHud, message, translatedComponent));
+            }
         });
-        return true;
+        return false;
     }
 
     void onTooltip(Object stack, List<Object> lines) {
@@ -265,7 +268,10 @@ public final class PortController {
         }
         if (record.translated != null) {
             record.active = !record.active;
-            rebuildChat(record.chatHud);
+            Object targetComponent = record.active 
+                ? ReflectionAccess.styledLiteral(record.translated, record.originalComponent)
+                : record.originalComponent;
+            ReflectionAccess.replaceMessageInChat(record.chatHud, record.originalComponent, targetComponent);
             return;
         }
         ParseResult parse = parsePlayerMessage(record.originalText);
@@ -278,28 +284,14 @@ public final class PortController {
                 record.translated = translated;
             }
             record.active = true;
-            renderTasks.add(() -> rebuildChat(record.chatHud));
+            Object targetComponent = ReflectionAccess.styledLiteral(record.translated, record.originalComponent);
+            if (targetComponent != null) {
+                renderTasks.add(() -> ReflectionAccess.replaceMessageInChat(record.chatHud, record.originalComponent, targetComponent));
+            }
         });
     }
 
-    private void rebuildChat(Object chatHud) {
-        if (chatHud == null) return;
-        suppressChat = true;
-        try {
-            ReflectionAccess.clearChat(chatHud);
-            synchronized (chat) {
-                for (ChatRecord record : chat) {
-                    if (record.chatHud != chatHud) continue;
-                    Object component = record.active && record.translated != null
-                        ? ReflectionAccess.styledLiteral(record.translated, record.originalComponent)
-                        : record.originalComponent;
-                    if (component != null) ReflectionAccess.addChat(chatHud, component);
-                }
-            }
-        } finally {
-            suppressChat = false;
-        }
-    }
+    private void rebuildChat(Object chatHud) {}
 
     private String buildTooltipKey(Object stack, List<String> lines) {
         StringBuilder key = new StringBuilder(stack == null ? "null" : stack.getClass().getName());

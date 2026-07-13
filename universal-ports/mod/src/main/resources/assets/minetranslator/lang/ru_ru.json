@@ -249,5 +249,8 @@
   "MineTranslator.button.copy_diagnostics": "Копировать диагностический отчёт",
   "MineTranslator.ui.desc.copy_diagnostics": "Копирует отчёт без API-ключа.",
   "MineTranslator.dialog.cache.title": "Очистить кэш перевода?",
-  "MineTranslator.dialog.cache.description": "Сохранённые переводы будут удалены без возможности восстановления."
+  "MineTranslator.dialog.cache.description": "Сохранённые переводы будут удалены без возможности восстановления.",
+  "MineTranslator.config.keys_title": "Клавиши MineTranslator",
+  "MineTranslator.config.keys_desc": "Откройте список управления, чтобы переназначить клавиши.",
+  "MineTranslator.config.controls": "Открыть управление"
 }

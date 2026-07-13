@@ -611,6 +611,112 @@ public final class ReflectionAccess {
         return null;
     }
 
+    @SuppressWarnings("unchecked")
+    static void replaceMessageInChat(Object chatHud, Object originalComponent, Object translatedComponent) {
+        if (chatHud == null || originalComponent == null || translatedComponent == null) return;
+        try {
+            Field messagesField = null;
+            for (Field field : chatHud.getClass().getDeclaredFields()) {
+                if (field.getType() == List.class) {
+                    String name = field.getName();
+                    if (name.equals("field_1864") || name.equals("allMessages") || name.equals("messages")) {
+                        messagesField = field;
+                        break;
+                    }
+                }
+            }
+            if (messagesField == null) {
+                for (Field field : chatHud.getClass().getDeclaredFields()) {
+                    if (field.getType() == List.class) {
+                        field.setAccessible(true);
+                        List<?> list = (List<?>) field.get(chatHud);
+                        if (list != null && !list.isEmpty()) {
+                            Object first = list.get(0);
+                            if (first != null && (first.getClass().getName().contains("GuiMessage") 
+                                || first.getClass().getName().contains("ChatHudLine")
+                                || first.getClass().getName().contains("class_303")
+                                || first.getClass().getName().contains("class_7596"))) {
+                                messagesField = field;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            if (messagesField == null) return;
+            messagesField.setAccessible(true);
+            List<Object> messages = (List<Object>) messagesField.get(chatHud);
+            if (messages == null) return;
+
+            boolean found = false;
+            for (int i = 0; i < messages.size(); i++) {
+                Object entry = messages.get(i);
+                if (entry == null) continue;
+                
+                Object entryComp = null;
+                Field compField = null;
+                for (Field f : entry.getClass().getDeclaredFields()) {
+                    if (hasClassInHierarchy(f.getType(), "net.minecraft.class_2561")
+                        || hasClassInHierarchy(f.getType(), "net.minecraft.network.chat.Component")) {
+                        f.setAccessible(true);
+                        Object val = f.get(entry);
+                        if (val == originalComponent) {
+                            compField = f;
+                            entryComp = val;
+                            break;
+                        }
+                    }
+                }
+                
+                if (compField != null) {
+                    found = true;
+                    if (entry.getClass().isRecord() || Modifier.isFinal(compField.getModifiers())) {
+                        Constructor<?>[] constructors = entry.getClass().getDeclaredConstructors();
+                        Constructor<?> best = null;
+                        for (Constructor<?> c : constructors) {
+                            if (best == null || c.getParameterTypes().length > best.getParameterTypes().length) {
+                                best = c;
+                            }
+                        }
+                        if (best != null) {
+                            best.setAccessible(true);
+                            Object[] args = new Object[best.getParameterTypes().length];
+                            Field[] fields = entry.getClass().getDeclaredFields();
+                            for (int j = 0; j < args.length; j++) {
+                                fields[j].setAccessible(true);
+                                if (fields[j] == compField) {
+                                    args[j] = translatedComponent;
+                                } else {
+                                    args[j] = fields[j].get(entry);
+                                }
+                            }
+                            Object newEntry = best.newInstance(args);
+                            messages.set(i, newEntry);
+                        }
+                    } else {
+                        compField.set(entry, translatedComponent);
+                    }
+                }
+            }
+
+            if (found) {
+                try {
+                    invokeStrict(chatHud, "method_44811");
+                } catch (NoSuchMethodException e) {
+                    try {
+                        invokeStrict(chatHud, "refreshTrimmedMessages");
+                    } catch (NoSuchMethodException ex) {
+                        try {
+                            invokeStrict(chatHud, "method_1808");
+                        } catch (Exception ignored) {}
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     private static boolean hasClassInHierarchy(Object value, String className) {
         if (value == null) return false;
         Class<?> current = value instanceof Class ? (Class<?>) value : value.getClass();

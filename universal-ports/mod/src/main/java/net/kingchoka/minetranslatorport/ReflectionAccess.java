@@ -432,14 +432,14 @@ public final class ReflectionAccess {
         Object parent = currentScreen(client);
         try {
             Class<?> configType = Class.forName("net.kingchoka.minetranslatorport.config.gui.ui.MineTranslatorConfigScreen");
-            Class<?> screenType = Class.forName("net.minecraft.class_437");
             Constructor<?> constructor = null;
-            try {
-                constructor = configType.getDeclaredConstructor(screenType);
-            } catch (NoSuchMethodException e) {
-                screenType = Class.forName("net.minecraft.client.gui.screens.Screen");
-                constructor = configType.getDeclaredConstructor(screenType);
+            for (Constructor<?> candidate : configType.getDeclaredConstructors()) {
+                if (candidate.getParameterTypes().length == 1) {
+                    constructor = candidate;
+                    break;
+                }
             }
+            if (constructor == null) throw new NoSuchMethodException("MineTranslatorConfigScreen(Screen)");
             constructor.setAccessible(true);
             Object screen = constructor.newInstance(parent);
             Object result = invokeStrict(client, "method_1507", screen);
@@ -447,17 +447,24 @@ public final class ReflectionAccess {
             return;
         } catch (ClassNotFoundException e) {
             try {
-                Class<?> screenType = Class.forName("net.minecraft.class_437");
                 Class<?> configType;
                 try {
                     configType = Class.forName("net.kingchoka.minetranslatorport.LegacyConfigScreen26");
                 } catch (ClassNotFoundException ex) {
                     configType = Class.forName("net.kingchoka.minetranslatorport.LegacyConfigScreen116");
                 }
-                Constructor<?> constructor = configType.getDeclaredConstructor(screenType);
+                Constructor<?> constructor = null;
+                for (Constructor<?> candidate : configType.getDeclaredConstructors()) {
+                    if (candidate.getParameterTypes().length == 1) {
+                        constructor = candidate;
+                        break;
+                    }
+                }
+                if (constructor == null) throw new NoSuchMethodException("LegacyConfigScreen(Screen)");
                 constructor.setAccessible(true);
                 Object screen = constructor.newInstance(parent);
-                invokeStrict(client, "method_1507", screen);
+                Object result = invokeStrict(client, "method_1507", screen);
+                if (result == null) invokeStrict(client, "setScreen", screen);
                 return;
             } catch (Exception ignored) {}
         } catch (Exception exception) {

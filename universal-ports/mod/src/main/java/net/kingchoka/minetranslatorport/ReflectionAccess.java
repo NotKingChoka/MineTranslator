@@ -22,15 +22,6 @@ public final class ReflectionAccess {
     private static Object configKeyMapping;
     private static boolean keyMappingsRegistered;
 
-    private static sun.misc.Unsafe unsafe;
-    static {
-        try {
-            Field theUnsafe = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
-            theUnsafe.setAccessible(true);
-            unsafe = (sun.misc.Unsafe) theUnsafe.get(null);
-        } catch (Exception ignored) {}
-    }
-
     private ReflectionAccess() {}
 
     static synchronized void ensureKeyMappings(Object client, File gameDirectory) {
@@ -648,51 +639,42 @@ public final class ReflectionAccess {
         return null;
     }
 
-    private static Object getFieldValueUnsafe(Object owner, Field field) {
-        if (unsafe == null) return null;
-        long offset = unsafe.objectFieldOffset(field);
-        Class<?> type = field.getType();
-        if (type == int.class) return unsafe.getInt(owner, offset);
-        if (type == long.class) return unsafe.getLong(owner, offset);
-        if (type == boolean.class) return unsafe.getBoolean(owner, offset);
-        if (type == float.class) return unsafe.getFloat(owner, offset);
-        if (type == double.class) return unsafe.getDouble(owner, offset);
-        if (type == char.class) return unsafe.getChar(owner, offset);
-        if (type == byte.class) return unsafe.getByte(owner, offset);
-        if (type == short.class) return unsafe.getShort(owner, offset);
-        return unsafe.getObject(owner, offset);
+    private static boolean isRecord(Class<?> clazz) {
+        try {
+            Method isRecordMethod = Class.class.getMethod("isRecord");
+            return (Boolean) isRecordMethod.invoke(clazz);
+        } catch (Exception ignored) {
+            return false;
+        }
     }
 
-    private static void setFieldValueUnsafe(Object owner, Field field, Object value) {
-        if (unsafe == null) return;
-        long offset = unsafe.objectFieldOffset(field);
-        Class<?> type = field.getType();
-        if (type == int.class) unsafe.putInt(owner, offset, ((Number) value).intValue());
-        else if (type == long.class) unsafe.putLong(owner, offset, ((Number) value).longValue());
-        else if (type == boolean.class) unsafe.putBoolean(owner, offset, (Boolean) value);
-        else if (type == float.class) unsafe.putFloat(owner, offset, ((Number) value).floatValue());
-        else if (type == double.class) unsafe.putDouble(owner, offset, ((Number) value).doubleValue());
-        else if (type == char.class) unsafe.putChar(owner, offset, (Character) value);
-        else if (type == byte.class) unsafe.putByte(owner, offset, ((Number) value).byteValue());
-        else if (type == short.class) unsafe.putShort(owner, offset, ((Number) value).shortValue());
-        else unsafe.putObject(owner, offset, value);
+    private static Object getRecordFieldValue(Object entry, Field field) throws Exception {
+        Method accessor = entry.getClass().getMethod(field.getName());
+        return accessor.invoke(entry);
     }
 
-    private static Object cloneAndReplaceField(Object entry, Field targetField, Object newValue) throws Exception {
-        if (unsafe == null) throw new IllegalStateException("Unsafe not available");
+    private static Object cloneAndReplaceRecordField(Object entry, Field targetField, Object newValue) throws Exception {
         Class<?> clazz = entry.getClass();
-        Object replacement = unsafe.allocateInstance(clazz);
-        for (Field f : allFields(clazz)) {
-            if (Modifier.isStatic(f.getModifiers())) continue;
-            long offset = unsafe.objectFieldOffset(f);
-            if (f.equals(targetField)) {
-                setFieldValueUnsafe(replacement, f, newValue);
+        Object[] recordComponents = (Object[]) Class.class.getMethod("getRecordComponents").invoke(clazz);
+        Class<?>[] paramTypes = new Class<?>[recordComponents.length];
+        Object[] args = new Object[recordComponents.length];
+        
+        for (int i = 0; i < recordComponents.length; i++) {
+            Object comp = recordComponents[i];
+            String name = (String) comp.getClass().getMethod("getName").invoke(comp);
+            Class<?> type = (Class<?>) comp.getClass().getMethod("getType").invoke(comp);
+            Method accessor = (Method) comp.getClass().getMethod("getAccessor").invoke(comp);
+            
+            paramTypes[i] = type;
+            if (name.equals(targetField.getName())) {
+                args[i] = newValue;
             } else {
-                Object val = getFieldValueUnsafe(entry, f);
-                setFieldValueUnsafe(replacement, f, val);
+                args[i] = accessor.invoke(entry);
             }
         }
-        return replacement;
+        
+        Constructor<?> constructor = clazz.getDeclaredConstructor(paramTypes);
+        return constructor.newInstance(args);
     }
 
     @SuppressWarnings("unchecked")
@@ -711,9 +693,23 @@ public final class ReflectionAccess {
                     if (entry == null) continue;
 
                     Field compField = null;
+                    boolean record = isRecord(entry.getClass());
+                    
                     for (Field candidate : allFields(entry.getClass())) {
                         if (Modifier.isStatic(candidate.getModifiers())) continue;
-                        Object value = getFieldValueUnsafe(entry, candidate);
+                        
+                        Object value;
+                        if (record) {
+                            try {
+                                value = getRecordFieldValue(entry, candidate);
+                            } catch (Exception ignored) {
+                                continue;
+                            }
+                        } else {
+                            candidate.setAccessible(true);
+                            value = candidate.get(entry);
+                        }
+                        
                         if (value == null) continue;
                         if (!hasClassInHierarchy(candidate.getType(), "net.minecraft.class_2561")
                             && !hasClassInHierarchy(candidate.getType(), "net.minecraft.network.chat.Component")
@@ -728,8 +724,14 @@ public final class ReflectionAccess {
                     }
 
                     if (compField == null) continue;
-                    Object replacement = cloneAndReplaceField(entry, compField, translatedComponent);
-                    messages.set(i, replacement);
+                    
+                    if (record) {
+                        Object replacement = cloneAndReplaceRecordField(entry, compField, translatedComponent);
+                        messages.set(i, replacement);
+                    } else {
+                        compField.setAccessible(true);
+                        compField.set(entry, translatedComponent);
+                    }
                     found = true;
                 }
                 if (found) break;

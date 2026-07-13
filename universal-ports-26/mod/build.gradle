@@ -6,7 +6,6 @@ sourceSets.main.resources.srcDir '../../universal-ports/mod/src/main/resources'
 
 dependencies {
     implementation project(':library')
-    include project(':library')
     compileOnly 'com.google.code.gson:gson:2.8.0'
 }
 

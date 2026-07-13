@@ -692,6 +692,14 @@ public final class ReflectionAccess {
                     Object entry = messages.get(i);
                     if (entry == null) continue;
 
+                    if (entry.getClass().getName().startsWith("java.")) {
+                        if (entry instanceof String && entry.equals(originalText)) {
+                            messages.set(i, text(translatedComponent));
+                            found = true;
+                        }
+                        continue;
+                    }
+
                     Field compField = null;
                     boolean record = isRecord(entry.getClass());
                     

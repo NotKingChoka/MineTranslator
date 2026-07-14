@@ -1,2 +1,5 @@
 - Fixes
   - Fabric and Forge-like's configs are not synchronized
+  - Settings screen crashing/not opening on Minecraft 26.x (Mojang renamed `Minecraft#setScreen` to `setScreenAndShow` and moved the active screen from `Minecraft` into `Minecraft#gui`)
+- Features
+  - Added Minecraft 26.1 and 26.2 ports, with the settings screen rewritten against their new render/input API (`GuiGraphicsExtractor`, event-based input)

@@ -107,10 +107,14 @@ public final class ReflectionAccess {
 
         // Try classes for the controls screen
         String[] controlsClasses = {
-            "net.minecraft.class_6599", // KeybindsScreen (1.19.4+)
-            "net.minecraft.class_458",  // ControlsOptionsScreen / ControlsScreen (1.16.5-1.19.2)
+            "net.minecraft.class_6599", // KeybindsScreen (1.19.4+ Intermediary)
+            "net.minecraft.class_458",  // ControlsOptionsScreen / ControlsScreen (1.16.5-1.19.2 Intermediary)
+            "net.minecraft.client.gui.screens.options.controls.KeyBindsScreen", // Mojmap 1.20+
+            "net.minecraft.client.gui.screen.option.KeybindsScreen",            // Yarn 1.20+
             "net.minecraft.client.gui.screens.controls.KeyBindsScreen",
-            "net.minecraft.client.gui.screens.controls.ControlsScreen"
+            "net.minecraft.client.gui.screens.controls.ControlsScreen",
+            "net.minecraft.client.gui.screens.options.controls.ControlsScreen",
+            "net.minecraft.client.gui.screen.options.ControlsOptionsScreen"
         };
 
         Class<?> screenType = null;

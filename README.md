@@ -1,34 +1,34 @@
 # MineTranslator
 
-**MineTranslator** — это быстрый, легкий и невероятно удобный мод для автоматического и ручного перевода чата, названий предметов, описаний (Lore), NPC и сообщений игроков прямо в Minecraft.
+**MineTranslator** is a fast, lightweight, and highly convenient auto-translation mod for Minecraft. It translates chat messages, item names, tooltips, NPC dialogues, and player input on the fly.
 
-Он поддерживает множество ИИ и стандартных переводчиков (Google Translate, DeepL, Gemini, Claude, OpenAI) и работает на широком спектре версий игры.
+The mod supports multiple translation services—including Google Translate, DeepL, Gemini, Claude, and OpenAI—across a wide range of Minecraft versions.
 
-## ✨ Основные возможности
+## ✨ Features
 
-* 🌐 **Автоперевод чата** — переводит сообщения других игроков и диалоги NPC на лету.
-* 📦 **Перевод предметов** — переводит названия, чары, характеристики и описания (Lore) предметов под курсором.
-* ✍️ **Перевод исходящих сообщений** — вы можете писать на своем языке, а мод автоматически переведет и отправит сообщение на целевом языке.
-* 🤖 **Поддержка ИИ-переводчиков** — контекстный перевод с помощью ИИ (Gemini, Claude, ChatGPT) для максимально естественного перевода в зависимости от контекста беседы.
-* ⚡ **Высокая производительность** — продвинутая система кэширования и предзагрузки исключает задержки в игре.
-
----
-
-## 🛠️ Управление по умолчанию
-
-* `Ё` (Grave Accent / Тильда) — Перевести чат, предмет под курсором или текст в поле ввода.
-* `O` (Щ) — Открыть экран настроек **MineTranslator**.
+* 🌐 **Auto Chat Translation** — Translates incoming chat messages and NPC dialogue instantly.
+* 📦 **Item Translation** — Translates item names, lore, stats, and enchantments on hover.
+* ✍️ **Outgoing Message Translation** — Write in your own language, and the mod will translate and send it automatically in the target language.
+* 🤖 **AI-Powered Translators** — Leverage Gemini, Claude, or ChatGPT to get context-aware and natural translations based on the surrounding conversation.
+* ⚡ **High Performance** — Built-in caching and asynchronous request preloading prevent any game lag or stuttering.
 
 ---
 
-## 📥 Загрузка
+## 🛠️ Default Controls
 
-Мод доступен на платформах:
+* `Grave Accent / Tilde` (`~` or `` ` ``) — Translate hovered chat line, hovered item, or current chat input.
+* `O` — Open **MineTranslator** settings screen.
+
+---
+
+## 📥 Downloads
+
+The mod is available on:
 * [Modrinth](https://modrinth.com/mod/minetranslator)
 * [CurseForge](https://www.curseforge.com/minecraft/mc-mods/minetranslator)
 
 ---
 
-## 📄 Лицензия
+## 📄 License
 
-Проект распространяется под лицензией MIT.
+This project is licensed under the MIT License.

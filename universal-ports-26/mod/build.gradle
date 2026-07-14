@@ -1,8 +1,22 @@
 base { archivesName = "MineTranslator-${minecraft_version}" }
 
-sourceSets.main.java.srcDir '../../universal-ports/mod/src/main/java'
-sourceSets.main.java.exclude '**/config/gui/ui/**'
+// The config/gui/ui package is NOT shared with universal-ports/mod: MC 26.2 rewrote the
+// screen render/input API (GuiGraphics -> GuiGraphicsExtractor, primitive input args ->
+// Event records), so this module keeps its own local port of that package under
+// src/main/java instead. Everything else (ReflectionAccess, PortController, etc.) is
+// still shared, filtered here via a Sync copy so both source trees never see the same
+// config/gui/ui class twice.
+def sharedPortSrcSync = tasks.register('syncSharedPortSources', Sync) {
+    from('../../universal-ports/mod/src/main/java') {
+        exclude '**/config/gui/ui/**'
+    }
+    into layout.buildDirectory.dir('generated/sharedPortSrc')
+}
+
+sourceSets.main.java.srcDir(sharedPortSrcSync.map { it.destinationDir })
 sourceSets.main.resources.srcDir '../../universal-ports/mod/src/main/resources'
+
+compileJava.dependsOn(sharedPortSrcSync)
 
 dependencies {
     implementation project(':library')

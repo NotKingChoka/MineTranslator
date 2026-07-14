@@ -7,6 +7,7 @@
   "authors": ["NotKingChoka"],
   "license": "MIT",
   "environment": "client",
+  "icon": "icon.png",
   "entrypoints": {
     "client": ["net.kingchoka.minetranslatorport.MineTranslatorPort"],
     "minetranslator-library": ["net.kingchoka.minetranslatorport.LibraryIntegration"]

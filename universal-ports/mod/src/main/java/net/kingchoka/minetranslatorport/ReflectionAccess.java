@@ -93,37 +93,72 @@ public final class ReflectionAccess {
     public static void openControls(Object client) {
         if (client == null) return;
         Object parent = currentScreen(client);
-        try {
-            Object options = findFieldValue(client, "net.minecraft.class_315");
-            Class<?> screenType = Class.forName("net.minecraft.class_437");
-            Class<?> optionsType = Class.forName("net.minecraft.class_315");
-            Class<?> controlsType = Class.forName("net.minecraft.class_458");
-            Constructor<?> constructor = controlsType.getDeclaredConstructor(screenType, optionsType);
-            constructor.setAccessible(true);
-            Object controls = constructor.newInstance(parent, options);
-            invokeStrict(client, "method_1507", controls);
-            return;
-        } catch (ClassNotFoundException ignored) {
-            // New official-name runtime; try the adapter below.
-        } catch (Exception exception) {
-            restoreScreen(client, parent);
-            System.out.println("[MineTranslator] Failed to open legacy controls screen: "
-                + rootCause(exception).getClass().getSimpleName());
+        
+        // Find options field value
+        Object options = findFieldValue(client, "field_1690"); // Intermediary for options
+        if (options == null) options = findFieldValue(client, "options"); // Mojmap/Yarn
+        if (options == null) options = findFieldValue(client, "net.minecraft.class_315");
+        if (options == null) options = findFieldValue(client, "net.minecraft.client.Options");
+        
+        if (options == null) {
+            System.out.println("[MineTranslator] Failed to find options field in client");
             return;
         }
-        try {
-            Object options = findFieldValue(client, "net.minecraft.client.Options");
-            Class<?> screenType = Class.forName("net.minecraft.client.gui.screens.Screen");
-            Class<?> optionsType = Class.forName("net.minecraft.client.Options");
-            Class<?> controlsType = Class.forName("net.minecraft.client.gui.screens.controls.ControlsScreen");
-            Constructor<?> constructor = controlsType.getDeclaredConstructor(screenType, optionsType);
-            constructor.setAccessible(true);
-            Object controls = constructor.newInstance(parent, options);
-            invokeStrict(client, "setScreen", controls);
-        } catch (Exception exception) {
-            restoreScreen(client, parent);
-            System.out.println("[MineTranslator] Failed to open controls screen: " + exception.getClass().getSimpleName());
+
+        // Try classes for the controls screen
+        String[] controlsClasses = {
+            "net.minecraft.class_6599", // KeybindsScreen (1.19.4+)
+            "net.minecraft.class_458",  // ControlsOptionsScreen / ControlsScreen (1.16.5-1.19.2)
+            "net.minecraft.client.gui.screens.controls.KeyBindsScreen",
+            "net.minecraft.client.gui.screens.controls.ControlsScreen"
+        };
+
+        Class<?> screenType = null;
+        try { screenType = Class.forName("net.minecraft.class_437"); }
+        catch (ClassNotFoundException e) {
+            try { screenType = Class.forName("net.minecraft.client.gui.screens.Screen"); }
+            catch (ClassNotFoundException ignored) {}
         }
+
+        Class<?> optionsType = options.getClass();
+
+        for (String className : controlsClasses) {
+            try {
+                Class<?> controlsType = Class.forName(className);
+                Constructor<?> constructor = null;
+                
+                // Find constructor taking (Screen, Options)
+                for (Constructor<?> c : controlsType.getDeclaredConstructors()) {
+                    Class<?>[] params = c.getParameterTypes();
+                    if (params.length == 2 && 
+                        screenType != null && screenType.isAssignableFrom(params[0]) && 
+                        params[1].isAssignableFrom(optionsType)) {
+                        constructor = c;
+                        break;
+                    }
+                }
+                
+                if (constructor != null) {
+                    constructor.setAccessible(true);
+                    Object controls = constructor.newInstance(parent, options);
+                    
+                    // setScreen method invocation
+                    try {
+                        invokeStrict(client, "method_1507", controls); // Intermediary
+                    } catch (NoSuchMethodException e) {
+                        invokeStrict(client, "setScreen", controls); // Mojmap/Yarn
+                    }
+                    System.out.println("[MineTranslator] Opened controls screen: " + className);
+                    return;
+                }
+            } catch (ClassNotFoundException ignored) {
+            } catch (Exception e) {
+                System.out.println("[MineTranslator] Failed to instantiate controls screen " + className + ": " + e.getClass().getSimpleName());
+            }
+        }
+        
+        restoreScreen(client, parent);
+        System.out.println("[MineTranslator] Failed to open any controls screen: ClassNotFoundException");
     }
 
     @SuppressWarnings("unchecked")

@@ -1,4 +1,4 @@
-# Translator++
+﻿# MineTranslator
 
 A Minecraft mod for swift, light, and convenient auto translation.
 
@@ -43,4 +43,4 @@ A Minecraft mod for swift, light, and convenient auto translation.
 
 ## Versioning (since `v2.2.0`)
 Display Name: `[${Platform} ${mc_ver_range}] v${mod_version}`  
-File Name: `translatorpp-${platform}-${mod_version}+${mc_ver_range}`
+File Name: `minetranslator-${platform}-${mod_version}+${mc_ver_range}`

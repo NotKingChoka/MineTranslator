@@ -1,8 +1,8 @@
-{
-  "config.title.MineTranslator": "Translator++ 选项",
-  "key.category.MineTranslator.general": "Translator++",
+﻿{
+  "config.title.MineTranslator": "MineTranslator 选项",
+  "key.category.MineTranslator.general": "MineTranslator",
   "key.MineTranslator.translate": "翻译",
-  "key.MineTranslator.config": "打开 Translator++ 选项",
+  "key.MineTranslator.config": "打开 MineTranslator 选项",
   "config.jade.plugin_MineTranslator.block_translation": "方块翻译",
   "config.jade.plugin_MineTranslator.entity_translation": "实体翻译",
   "misc.MineTranslator.translation.failed": "翻译失败...",
@@ -10,12 +10,12 @@
   "misc.MineTranslator.translation.failed.chat.status_code": "翻译出错，状态码 %d。\n错误详情：\n%s",
   "misc.MineTranslator.translation.processing": "正在翻译...",
   "misc.MineTranslator.translation": "%s",
-  "misc.MineTranslator.missing.clothconfig": "§cTranslator++ 配置需要 Cloth Config API，但当前未加载！",
+  "misc.MineTranslator.missing.clothconfig": "§cMineTranslator 配置需要 Cloth Config API，但当前未加载！",
   "gui.title.MineTranslator.missing.clothconfig": "§c缺失 Cloth Config API",
-  "gui.MineTranslator.missing.clothconfig.0": "配置 Translator++ 需要 Cloth Config API。",
+  "gui.MineTranslator.missing.clothconfig.0": "配置 MineTranslator 需要 Cloth Config API。",
   "gui.MineTranslator.missing.clothconfig.1": "如果需要编辑选项，请先安装该模组。",
 
-  "MineTranslator.screen.title": "Translator++ 设置",
+  "MineTranslator.screen.title": "MineTranslator 设置",
   "MineTranslator.category.general": "常规",
   "MineTranslator.category.providers": "翻译服务商",
   "MineTranslator.category.chat": "聊天翻译",

@@ -1,8 +1,8 @@
-{
-  "config.title.MineTranslator": "Налаштування Translator++",
-  "key.category.MineTranslator.general": "Translator++",
+﻿{
+  "config.title.MineTranslator": "Налаштування MineTranslator",
+  "key.category.MineTranslator.general": "MineTranslator",
   "key.MineTranslator.translate": "Перекласти",
-  "key.MineTranslator.config": "Відкрити налаштування Translator++",
+  "key.MineTranslator.config": "Відкрити налаштування MineTranslator",
   "config.jade.plugin_MineTranslator.block_translation": "Переклад блоків",
   "config.jade.plugin_MineTranslator.entity_translation": "Переклад сутностей",
   "misc.MineTranslator.translation.failed": "Переклад не вдався...",
@@ -10,12 +10,12 @@
   "misc.MineTranslator.translation.failed.chat.status_code": "Помилка перекладу з кодом %d.\nВміст помилки:\n%s",
   "misc.MineTranslator.translation.processing": "Переклад...",
   "misc.MineTranslator.translation": "%s",
-  "misc.MineTranslator.missing.clothconfig": "§cДля налаштування Translator++ потрібен Cloth Config API, але він відсутній!",
+  "misc.MineTranslator.missing.clothconfig": "§cДля налаштування MineTranslator потрібен Cloth Config API, але він відсутній!",
   "gui.title.MineTranslator.missing.clothconfig": "§cВідсутній Cloth Config API",
-  "gui.MineTranslator.missing.clothconfig.0": "Для налаштування Translator++ потрібен Cloth Config API.",
+  "gui.MineTranslator.missing.clothconfig.0": "Для налаштування MineTranslator потрібен Cloth Config API.",
   "gui.MineTranslator.missing.clothconfig.1": "Якщо ви хочете змінити параметри, встановіть його спочатку.",
 
-  "MineTranslator.screen.title": "Налаштування Translator++",
+  "MineTranslator.screen.title": "Налаштування MineTranslator",
   "MineTranslator.category.general": "Загальні",
   "MineTranslator.category.providers": "Перекладачі",
   "MineTranslator.category.chat": "Переклад чату",

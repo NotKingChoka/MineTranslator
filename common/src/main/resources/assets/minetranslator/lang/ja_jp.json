@@ -1,8 +1,8 @@
-{
-  "config.title.MineTranslator": "Translator++ 設定",
-  "key.category.MineTranslator.general": "Translator++",
+﻿{
+  "config.title.MineTranslator": "MineTranslator 設定",
+  "key.category.MineTranslator.general": "MineTranslator",
   "key.MineTranslator.translate": "翻訳",
-  "key.MineTranslator.config": "Translator++ 設定を開く",
+  "key.MineTranslator.config": "MineTranslator 設定を開く",
   "config.jade.plugin_MineTranslator.block_translation": "ブロックの翻訳",
   "config.jade.plugin_MineTranslator.entity_translation": "エンティティの翻訳",
   "misc.MineTranslator.translation.failed": "翻訳に失敗しました...",
@@ -10,12 +10,12 @@
   "misc.MineTranslator.translation.failed.chat.status_code": "翻訳エラー (コード %d)。\n詳細:\n%s",
   "misc.MineTranslator.translation.processing": "翻訳中...",
   "misc.MineTranslator.translation": "%s",
-  "misc.MineTranslator.missing.clothconfig": "§cTranslator++ 設定には Cloth Config API が必要ですが、見つかりません！",
+  "misc.MineTranslator.missing.clothconfig": "§cMineTranslator 設定には Cloth Config API が必要ですが、見つかりません！",
   "gui.title.MineTranslator.missing.clothconfig": "§cCloth Config API が見つかりません",
-  "gui.MineTranslator.missing.clothconfig.0": "Translator++ の設定には Cloth Config API が必要です。",
+  "gui.MineTranslator.missing.clothconfig.0": "MineTranslator の設定には Cloth Config API が必要です。",
   "gui.MineTranslator.missing.clothconfig.1": "設定を編集するには、まずそれをインストールしてください。",
 
-  "MineTranslator.screen.title": "Translator++ 設定",
+  "MineTranslator.screen.title": "MineTranslator 設定",
   "MineTranslator.category.general": "全般",
   "MineTranslator.category.providers": "翻訳プロバイダー",
   "MineTranslator.category.chat": "チャット翻訳",

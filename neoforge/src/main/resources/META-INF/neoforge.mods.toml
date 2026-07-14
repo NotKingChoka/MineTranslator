@@ -1,8 +1,8 @@
-modLoader = "javafml"
+﻿modLoader = "javafml"
 loaderVersion = "[1,)"
 clientSideOnly = true
 displayURL = "https://www.curseforge.com/minecraft/mc-mods/MineTranslator"
-issueTrackerURL = "https://github.com/pSUNSET/MineTranslator/issues"
+issueTrackerURL = "https://github.com/NotKingChoka/MineTranslator/issues"
 logoFile = "icon.png"
 authors = "NotKingChoka"
 credits = "Everyone who contributed to this mod"
@@ -11,7 +11,7 @@ license = "MIT"
 [[mods]]
 modId = "minetranslator"
 version = "${version}"
-displayName = "Translator++"
+displayName = "MineTranslator"
 description = '''
 A mod for swift, light and convenient auto translation.
 '''

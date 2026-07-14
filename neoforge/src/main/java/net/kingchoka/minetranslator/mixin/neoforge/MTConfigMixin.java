@@ -1,4 +1,4 @@
-package net.kingchoka.minetranslator.mixin.neoforge;
+﻿package net.kingchoka.minetranslator.mixin.neoforge;
 
 import net.kingchoka.minetranslator.MineTranslator;
 import net.kingchoka.minetranslator.config.MTConfig;
@@ -11,7 +11,7 @@ public interface MTConfigMixin {
 
     @Overwrite
     static void init() {
-        MineTranslator.LOGGER.debug("NeoForge is loaded, using neoforge for Translator++ Config.");
+        MineTranslator.LOGGER.debug("NeoForge is loaded, using neoforge for MineTranslator Config.");
         MTConfig.Dummy.INSTANCE = MTConfigImplNeoForge.INSTANCE;
         // init is completed in mod constructor, no need to call here
 //        MTConfigImplNeoForge.init(container);

@@ -1,8 +1,8 @@
-{
-  "config.title.MineTranslator": "Translator++ Баптаулары",
-  "key.category.MineTranslator.general": "Translator++",
+﻿{
+  "config.title.MineTranslator": "MineTranslator Баптаулары",
+  "key.category.MineTranslator.general": "MineTranslator",
   "key.MineTranslator.translate": "Аудару",
-  "key.MineTranslator.config": "Translator++ баптауларын ашу",
+  "key.MineTranslator.config": "MineTranslator баптауларын ашу",
   "config.jade.plugin_MineTranslator.block_translation": "Блоктарды аудару",
   "config.jade.plugin_MineTranslator.entity_translation": "Мәндерді аудару",
   "misc.MineTranslator.translation.failed": "Аударма сәтсіз аяқталды...",
@@ -10,12 +10,12 @@
   "misc.MineTranslator.translation.failed.chat.status_code": "Қате коды %d.\nҚате сипаттамасы:\n%s",
   "misc.MineTranslator.translation.processing": "Аударылуда...",
   "misc.MineTranslator.translation": "%s",
-  "misc.MineTranslator.missing.clothconfig": "§cTranslator++ баптаулары үшін Cloth Config API қажет, бірақ ол табылмады!",
+  "misc.MineTranslator.missing.clothconfig": "§cMineTranslator баптаулары үшін Cloth Config API қажет, бірақ ол табылмады!",
   "gui.title.MineTranslator.missing.clothconfig": "§cCloth Config API жетіспейді",
-  "gui.MineTranslator.missing.clothconfig.0": "Translator++ баптаулары үшін Cloth Config API қажет.",
+  "gui.MineTranslator.missing.clothconfig.0": "MineTranslator баптаулары үшін Cloth Config API қажет.",
   "gui.MineTranslator.missing.clothconfig.1": "Егер баптауларды өзгерткіңіз келсе, оны алдымен орнатыңыз.",
 
-  "MineTranslator.screen.title": "Translator++ Баптаулары",
+  "MineTranslator.screen.title": "MineTranslator Баптаулары",
   "MineTranslator.category.general": "Жалпы",
   "MineTranslator.category.providers": "Аудармашылар",
   "MineTranslator.category.chat": "Чатты аудару",

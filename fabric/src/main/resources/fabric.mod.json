@@ -1,16 +1,16 @@
-{
+﻿{
   "schemaVersion": 1,
   "id": "minetranslator",
   "version": "${version}",
-  "name": "Translator++",
+  "name": "MineTranslator",
   "description": "A mod for swift, light and convenient auto translation.",
   "authors": [
     "NotKingChoka"
   ],
   "contact": {
-    "homepage": "https://modrinth.com/project/translator++",
-    "sources": "https://github.com/pSUNSET/MineTranslator",
-    "issues": "https://github.com/pSUNSET/MineTranslator/issues"
+    "homepage": "https://modrinth.com/project/MineTranslator",
+    "sources": "https://github.com/NotKingChoka/MineTranslator",
+    "issues": "https://github.com/NotKingChoka/MineTranslator/issues"
   },
   "license": "MIT",
   "icon": "icon.png",

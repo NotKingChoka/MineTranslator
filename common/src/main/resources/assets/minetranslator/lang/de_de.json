@@ -1,8 +1,8 @@
-{
-  "config.title.MineTranslator": "Translator++ Optionen",
-  "key.category.MineTranslator.general": "Translator++",
+﻿{
+  "config.title.MineTranslator": "MineTranslator Optionen",
+  "key.category.MineTranslator.general": "MineTranslator",
   "key.MineTranslator.translate": "Übersetzen",
-  "key.MineTranslator.config": "Translator++ Optionen öffnen",
+  "key.MineTranslator.config": "MineTranslator Optionen öffnen",
   "config.jade.plugin_MineTranslator.block_translation": "Block-Übersetzung",
   "config.jade.plugin_MineTranslator.entity_translation": "Kreaturen-Übersetzung",
   "misc.MineTranslator.translation.failed": "Übersetzung fehlgeschlagen...",
@@ -10,12 +10,12 @@
   "misc.MineTranslator.translation.failed.chat.status_code": "Übersetzungsfehler mit Code %d.\nDetails:\n%s",
   "misc.MineTranslator.translation.processing": "Übersetzung läuft...",
   "misc.MineTranslator.translation": "%s",
-  "misc.MineTranslator.missing.clothconfig": "§cDie Translator++-Konfiguration benötigt die Cloth Config API, diese fehlt jedoch!",
+  "misc.MineTranslator.missing.clothconfig": "§cDie MineTranslator-Konfiguration benötigt die Cloth Config API, diese fehlt jedoch!",
   "gui.title.MineTranslator.missing.clothconfig": "§cCloth Config API fehlt",
-  "gui.MineTranslator.missing.clothconfig.0": "Die Konfiguration von Translator++ erfordert die Cloth Config API.",
+  "gui.MineTranslator.missing.clothconfig.0": "Die Konfiguration von MineTranslator erfordert die Cloth Config API.",
   "gui.MineTranslator.missing.clothconfig.1": "Bitte installiere sie zuerst, um Optionen zu bearbeiten.",
 
-  "MineTranslator.screen.title": "Translator++ Optionen",
+  "MineTranslator.screen.title": "MineTranslator Optionen",
   "MineTranslator.category.general": "Allgemein",
   "MineTranslator.category.providers": "Übersetzer",
   "MineTranslator.category.chat": "Chat-Übersetzung",

@@ -1,0 +1,11 @@
+base { archivesName = "MineTranslator-Library-${minecraft_version}" }
+
+sourceSets.main.java.srcDir '../../universal-ports/library/src/main/java'
+
+processResources {
+    inputs.property 'version', mod_version
+    inputs.property 'minecraft_version', minecraft_version
+    filesMatching('fabric.mod.json') {
+        expand(version: mod_version, minecraft_version: minecraft_version)
+    }
+}

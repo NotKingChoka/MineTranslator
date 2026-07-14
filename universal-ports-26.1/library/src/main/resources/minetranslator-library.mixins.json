@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "package": "net.kingchoka.mtlib.mixin",
+  "compatibilityLevel": "JAVA_8",
+  "minVersion": "0.8",
+  "client": [
+    "ClientTick26Mixin",
+    "Keyboard26Mixin",
+    "ChatHud26Mixin",
+    "ItemTooltip26Mixin"
+  ],
+  "injectors": {"defaultRequire": 1}
+}

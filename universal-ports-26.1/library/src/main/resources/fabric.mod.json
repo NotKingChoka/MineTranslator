@@ -1,4 +1,4 @@
-{
+﻿{
   "schemaVersion": 1,
   "id": "minetranslatorlib",
   "version": "${version}",
@@ -6,7 +6,7 @@
   "description": "Standalone cross-version hooks for MineTranslator without Fabric API.",
   "authors": ["NotKingChoka"],
   "license": "MIT",
-  "environment": "client",
+  "environment": "client",`n  "icon": "icon.png",
   "entrypoints": {
     "client": ["net.kingchoka.mtlib.fabric.MTLibraryMod"]
   },

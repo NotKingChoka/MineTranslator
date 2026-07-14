@@ -1,4 +1,4 @@
-{
+﻿{
   "schemaVersion": 1,
   "id": "minetranslatorlib",
   "version": "${version}",
@@ -6,7 +6,7 @@
   "description": "Standalone client hook library required by MineTranslator.",
   "authors": ["NotKingChoka"],
   "license": "MIT",
-  "environment": "client",
+  "environment": "client",`n  "icon": "icon.png",
   "entrypoints": {
     "client": [
       "net.kingchoka.minetranslatorlib.fabric.MineTranslatorLibraryMod"

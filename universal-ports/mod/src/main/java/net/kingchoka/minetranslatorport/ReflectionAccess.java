@@ -119,22 +119,28 @@ public final class ReflectionAccess {
             try { screenType = Class.forName("net.minecraft.client.gui.screens.Screen"); }
             catch (ClassNotFoundException ignored) {}
         }
-
         Class<?> optionsType = options.getClass();
+        System.out.println("[MineTranslator Debug] openControls: options class is " + optionsType.getName() + ", screenType is " + (screenType == null ? "null" : screenType.getName()));
 
         for (String className : controlsClasses) {
             try {
+                System.out.println("[MineTranslator Debug] Trying to load controls class: " + className);
                 Class<?> controlsType = Class.forName(className);
+                System.out.println("[MineTranslator Debug] Loaded controls class: " + className);
                 Constructor<?> constructor = null;
                 
                 // Find constructor taking (Screen, Options)
                 for (Constructor<?> c : controlsType.getDeclaredConstructors()) {
                     Class<?>[] params = c.getParameterTypes();
-                    if (params.length == 2 && 
-                        screenType != null && screenType.isAssignableFrom(params[0]) && 
-                        params[1].isAssignableFrom(optionsType)) {
-                        constructor = c;
-                        break;
+                    System.out.println("[MineTranslator Debug]   Constructor has " + params.length + " parameters");
+                    if (params.length == 2) {
+                        System.out.println("[MineTranslator Debug]     param0: " + params[0].getName() + " (assignable from Screen: " + (screenType != null && params[0].isAssignableFrom(screenType)) + ", assigns Screen: " + (screenType != null && screenType.isAssignableFrom(params[0])) + ")");
+                        System.out.println("[MineTranslator Debug]     param1: " + params[1].getName() + " (assignable from Options: " + params[1].isAssignableFrom(optionsType) + ")");
+                        if (screenType != null && screenType.isAssignableFrom(params[0]) && 
+                            params[1].isAssignableFrom(optionsType)) {
+                            constructor = c;
+                            break;
+                        }
                     }
                 }
                 
@@ -150,10 +156,14 @@ public final class ReflectionAccess {
                     }
                     System.out.println("[MineTranslator] Opened controls screen: " + className);
                     return;
+                } else {
+                    System.out.println("[MineTranslator Debug] Suitable constructor not found for class: " + className);
                 }
-            } catch (ClassNotFoundException ignored) {
+            } catch (ClassNotFoundException e) {
+                System.out.println("[MineTranslator Debug] Class not found: " + className);
             } catch (Exception e) {
                 System.out.println("[MineTranslator] Failed to instantiate controls screen " + className + ": " + e.getClass().getSimpleName());
+                e.printStackTrace();
             }
         }
         

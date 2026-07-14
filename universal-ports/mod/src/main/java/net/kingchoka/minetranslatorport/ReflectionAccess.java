@@ -124,55 +124,39 @@ public final class ReflectionAccess {
             catch (ClassNotFoundException ignored) {}
         }
         Class<?> optionsType = options.getClass();
-        System.out.println("[MineTranslator Debug] openControls: options class is " + optionsType.getName() + ", screenType is " + (screenType == null ? "null" : screenType.getName()));
 
         for (String className : controlsClasses) {
             try {
-                System.out.println("[MineTranslator Debug] Trying to load controls class: " + className);
                 Class<?> controlsType = Class.forName(className);
-                System.out.println("[MineTranslator Debug] Loaded controls class: " + className);
                 Constructor<?> constructor = null;
-                
+
                 // Find constructor taking (Screen, Options)
                 for (Constructor<?> c : controlsType.getDeclaredConstructors()) {
                     Class<?>[] params = c.getParameterTypes();
-                    System.out.println("[MineTranslator Debug]   Constructor has " + params.length + " parameters");
-                    if (params.length == 2) {
-                        System.out.println("[MineTranslator Debug]     param0: " + params[0].getName() + " (assignable from Screen: " + (screenType != null && params[0].isAssignableFrom(screenType)) + ", assigns Screen: " + (screenType != null && screenType.isAssignableFrom(params[0])) + ")");
-                        System.out.println("[MineTranslator Debug]     param1: " + params[1].getName() + " (assignable from Options: " + params[1].isAssignableFrom(optionsType) + ")");
-                        if (screenType != null && screenType.isAssignableFrom(params[0]) && 
-                            params[1].isAssignableFrom(optionsType)) {
-                            constructor = c;
-                            break;
-                        }
+                    if (params.length == 2 && screenType != null && screenType.isAssignableFrom(params[0])
+                        && params[1].isAssignableFrom(optionsType)) {
+                        constructor = c;
+                        break;
                     }
                 }
-                
+
                 if (constructor != null) {
                     constructor.setAccessible(true);
                     Object controls = constructor.newInstance(parent, options);
-                    
-                    // setScreen method invocation
-                    try {
-                        invokeStrict(client, "method_1507", controls); // Intermediary
-                    } catch (NoSuchMethodException e) {
-                        invokeStrict(client, "setScreen", controls); // Mojmap/Yarn
-                    }
+
+                    setScreen(client, controls);
                     System.out.println("[MineTranslator] Opened controls screen: " + className);
                     return;
-                } else {
-                    System.out.println("[MineTranslator Debug] Suitable constructor not found for class: " + className);
                 }
-            } catch (ClassNotFoundException e) {
-                System.out.println("[MineTranslator Debug] Class not found: " + className);
+            } catch (ClassNotFoundException ignored) {
+                // Not the right mapping/version for this candidate; try the next one.
             } catch (Exception e) {
                 System.out.println("[MineTranslator] Failed to instantiate controls screen " + className + ": " + e.getClass().getSimpleName());
-                e.printStackTrace();
             }
         }
-        
+
         restoreScreen(client, parent);
-        System.out.println("[MineTranslator] Failed to open any controls screen: ClassNotFoundException");
+        System.out.println("[MineTranslator] Failed to open any known controls screen class");
     }
 
     @SuppressWarnings("unchecked")
@@ -195,12 +179,23 @@ public final class ReflectionAccess {
 
     private static void restoreScreen(Object client, Object parent) {
         try {
-            if (hasClassInHierarchy(client, "net.minecraft.class_310")) {
-                invokeStrict(client, "method_1507", parent);
-            } else {
-                invokeStrict(client, "setScreen", parent);
-            }
+            setScreen(client, parent);
         } catch (Exception ignored) {}
+    }
+
+    // Method name varies across Minecraft versions/mappings:
+    // Intermediary uses method_1507, Mojmap/Yarn used setScreen through MC 26.1,
+    // and 26.2 renamed it to setScreenAndShow.
+    private static void setScreen(Object client, Object screen) throws Exception {
+        try {
+            invokeStrict(client, "method_1507", screen);
+            return;
+        } catch (NoSuchMethodException ignored) {}
+        try {
+            invokeStrict(client, "setScreen", screen);
+            return;
+        } catch (NoSuchMethodException ignored) {}
+        invokeStrict(client, "setScreenAndShow", screen);
     }
 
     private static Throwable rootCause(Throwable throwable) {
@@ -268,7 +263,19 @@ public final class ReflectionAccess {
 
     static Object currentScreen(Object client) {
         Object screen = findFieldValue(client, "net.minecraft.class_437");
-        return screen != null ? screen : findFieldValue(client, "net.minecraft.client.gui.screens.Screen");
+        if (screen == null) screen = findFieldValue(client, "net.minecraft.client.gui.screens.Screen");
+        if (screen == null) screen = currentScreenViaGuiHolder(client);
+        return screen;
+    }
+
+    // MC 26.2 moved the active Screen off Minecraft itself and into Minecraft.gui
+    // (Gui#screen); Minecraft.setScreenAndShow(Screen) just delegates to gui.setScreen(...).
+    private static Object currentScreenViaGuiHolder(Object client) {
+        Object gui = findFieldValue(client, "net.minecraft.client.gui.Gui");
+        if (gui == null) return null;
+        Object screen = call(gui, "screen");
+        if (screen == null) screen = findFieldValue(gui, "net.minecraft.client.gui.screens.Screen");
+        return screen;
     }
 
     static Object textField(Object screen) {
@@ -491,11 +498,7 @@ public final class ReflectionAccess {
             if (constructor == null) throw new NoSuchMethodException("MineTranslatorConfigScreen(Screen)");
             constructor.setAccessible(true);
             Object screen = constructor.newInstance(parent);
-            try {
-                invokeStrict(client, "method_1507", screen);
-            } catch (NoSuchMethodException ignoredEx) {
-                invokeStrict(client, "setScreen", screen);
-            }
+            setScreen(client, screen);
             return;
         } catch (ClassNotFoundException e) {
             try {
@@ -515,11 +518,7 @@ public final class ReflectionAccess {
                 if (constructor == null) throw new NoSuchMethodException("LegacyConfigScreen(Screen)");
                 constructor.setAccessible(true);
                 Object screen = constructor.newInstance(parent);
-                try {
-                    invokeStrict(client, "method_1507", screen);
-                } catch (NoSuchMethodException ignoredEx) {
-                    invokeStrict(client, "setScreen", screen);
-                }
+                setScreen(client, screen);
                 return;
             } catch (Exception ignored) {}
         } catch (Exception exception) {
@@ -627,16 +626,9 @@ public final class ReflectionAccess {
         Class<?> current = target.getClass();
         while (current != null) {
             for (Method method : current.getDeclaredMethods()) {
-                if (method.getName().equals(name)) {
-                    System.out.println("[MineTranslator Debug] invokeStrict: found method " + name + " with " + method.getParameterCount() + " parameters:");
-                    for (Class<?> p : method.getParameterTypes()) {
-                        String argClassName = (args.length > 0 && args[0] != null) ? args[0].getClass().getName() : "null";
-                        System.out.println("[MineTranslator Debug]   param: " + p.getName() + " (assignable from arg class " + argClassName + ": " + (args.length > 0 && args[0] != null && p.isAssignableFrom(args[0].getClass())) + ")");
-                    }
-                    if (compatible(method.getParameterTypes(), args)) {
-                        method.setAccessible(true);
-                        return method.invoke(target, args);
-                    }
+                if (method.getName().equals(name) && compatible(method.getParameterTypes(), args)) {
+                    method.setAccessible(true);
+                    return method.invoke(target, args);
                 }
             }
             current = current.getSuperclass();

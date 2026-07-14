@@ -22,6 +22,6 @@ public abstract class PackRepositoryMixin {
     private void minetranslatorlib$addRegisteredResources(RepositorySource[] initialSources, CallbackInfo ci) {
         Set<RepositorySource> extended = new LinkedHashSet<>(sources);
         extended.add(MineTranslatorResourceLibrary.createSource());
-        sources = Set.copyOf(extended);
+        sources = extended;
     }
 }

@@ -627,9 +627,16 @@ public final class ReflectionAccess {
         Class<?> current = target.getClass();
         while (current != null) {
             for (Method method : current.getDeclaredMethods()) {
-                if (method.getName().equals(name) && compatible(method.getParameterTypes(), args)) {
-                    method.setAccessible(true);
-                    return method.invoke(target, args);
+                if (method.getName().equals(name)) {
+                    System.out.println("[MineTranslator Debug] invokeStrict: found method " + name + " with " + method.getParameterCount() + " parameters:");
+                    for (Class<?> p : method.getParameterTypes()) {
+                        String argClassName = (args.length > 0 && args[0] != null) ? args[0].getClass().getName() : "null";
+                        System.out.println("[MineTranslator Debug]   param: " + p.getName() + " (assignable from arg class " + argClassName + ": " + (args.length > 0 && args[0] != null && p.isAssignableFrom(args[0].getClass())) + ")");
+                    }
+                    if (compatible(method.getParameterTypes(), args)) {
+                        method.setAccessible(true);
+                        return method.invoke(target, args);
+                    }
                 }
             }
             current = current.getSuperclass();
